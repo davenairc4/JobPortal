@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Positions - {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Manage Positions for {{ job.title }}</h1>
+    
+    <div class="row">
+        <div class="col-md-7">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Current Positions</h5>
+                </div>
+                <div class="card-body">
+                    {% if positions %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Number of Positions</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for position in positions %}
+                                    <tr>
+                                        <td>{{ position.title }}</td>
+                                        <td>{{ position.number_of_positions }}</td>
+                                        <td>
+                                            <span class="badge bg-{% if position.is_filled %}success{% else %}warning{% endif %}">
+                                                {% if position.is_filled %}Filled{% else %}Open{% endif %}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No positions have been added yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <a href="{% url 'job_detail' job.id %}" class="btn btn-secondary">Back to Job</a>
+        </div>
+        
+        <div class="col-md-5">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Add New Position</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">Position Title</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.number_of_positions.id_for_label }}" class="form-label">Number of Positions</label>
+                            {{ form.number_of_positions }}
+                            {% if form.number_of_positions.errors %}
+                            <div class="text-danger">{{ form.number_of_positions.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            {{ form.is_filled }}
+                            <label class="form-check-label" for="{{ form.is_filled.id_for_label }}">
+                                Positions are filled
+                            </label>
+                            {% if form.is_filled.errors %}
+                            <div class="text-danger">{{ form.is_filled.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Add Position</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Apply Bootstrap classes to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formControls = document.querySelectorAll('input:not([type="checkbox"]), select, textarea');
+        formControls.forEach(element => {
+            if (!element.classList.contains('form-control')) {
+                element.classList.add('form-control');
+            }
+        });
+        
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(element => {
+            if (!element.classList.contains('form-check-input')) {
+                element.classList.add('form-check-input');
+            }
+        });
+    });
+</script>
+{% endblock %}

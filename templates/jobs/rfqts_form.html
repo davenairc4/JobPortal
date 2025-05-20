@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block title %}Create RFQTS{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">{% if rfqts %}Edit{% else %}Create{% endif %} RFQTS</h1>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.rfqts_no.id_for_label }}" class="form-label">RFQTS Number</label>
+                        {{ form.rfqts_no }}
+                        {% if form.rfqts_no.errors %}
+                        <div class="text-danger">{{ form.rfqts_no.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.department.id_for_label }}" class="form-label">Department</label>
+                        {{ form.department }}
+                        {% if form.department.errors %}
+                        <div class="text-danger">{{ form.department.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.group.id_for_label }}" class="form-label">Group</label>
+                        {{ form.group }}
+                        {% if form.group.errors %}
+                        <div class="text-danger">{{ form.group.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.directorate.id_for_label }}" class="form-label">Directorate</label>
+                        {{ form.directorate }}
+                        {% if form.directorate.errors %}
+                        <div class="text-danger">{{ form.directorate.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.project_section.id_for_label }}" class="form-label">Project Section</label>
+                        {{ form.project_section }}
+                        {% if form.project_section.errors %}
+                        <div class="text-danger">{{ form.project_section.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.task_title.id_for_label }}" class="form-label">Task Title</label>
+                    {{ form.task_title }}
+                    {% if form.task_title.errors %}
+                    <div class="text-danger">{{ form.task_title.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.commencement_date_for_task.id_for_label }}" class="form-label">Commencement Date</label>
+                        {{ form.commencement_date_for_task }}
+                        {% if form.commencement_date_for_task.errors %}
+                        <div class="text-danger">{{ form.commencement_date_for_task.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.completion_date_for_task.id_for_label }}" class="form-label">Completion Date</label>
+                        {{ form.completion_date_for_task }}
+                        {% if form.completion_date_for_task.errors %}
+                        <div class="text-danger">{{ form.completion_date_for_task.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.closing_date_for_quotation.id_for_label }}" class="form-label">Closing Date for Quotation</label>
+                        {{ form.closing_date_for_quotation }}
+                        {% if form.closing_date_for_quotation.errors %}
+                        <div class="text-danger">{{ form.closing_date_for_quotation.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.rfqts_type.id_for_label }}" class="form-label">RFQTS Type</label>
+                        {{ form.rfqts_type }}
+                        {% if form.rfqts_type.errors %}
+                        <div class="text-danger">{{ form.rfqts_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.skills_levels.id_for_label }}" class="form-label">Skills Levels</label>
+                        {{ form.skills_levels }}
+                        {% if form.skills_levels.errors %}
+                        <div class="text-danger">{{ form.skills_levels.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="{{ form.service_category.id_for_label }}" class="form-label">Service Category</label>
+                        {{ form.service_category }}
+                        {% if form.service_category.errors %}
+                        <div class="text-danger">{{ form.service_category.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.skills_sets.id_for_label }}" class="form-label">Skills Sets</label>
+                    {{ form.skills_sets }}
+                    {% if form.skills_sets.errors %}
+                    <div class="text-danger">{{ form.skills_sets.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.scope_of_task.id_for_label }}" class="form-label">Scope of Task</label>
+                    {{ form.scope_of_task }}
+                    {% if form.scope_of_task.errors %}
+                    <div class="text-danger">{{ form.scope_of_task.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.location.id_for_label }}" class="form-label">Location</label>
+                    {{ form.location }}
+                    {% if form.location.errors %}
+                    <div class="text-danger">{{ form.location.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.deliverables.id_for_label }}" class="form-label">Deliverables</label>
+                    {{ form.deliverables }}
+                    {% if form.deliverables.errors %}
+                    <div class="text-danger">{{ form.deliverables.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.specified_personnel.id_for_label }}" class="form-label">Specified Personnel</label>
+                    {{ form.specified_personnel }}
+                    {% if form.specified_personnel.errors %}
+                    <div class="text-danger">{{ form.specified_personnel.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.evaluation_criteria.id_for_label }}" class="form-label">Evaluation Criteria</label>
+                    {{ form.evaluation_criteria }}
+                    {% if form.evaluation_criteria.errors %}
+                    <div class="text-danger">{{ form.evaluation_criteria.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="{{ form.rfq_file.id_for_label }}" class="form-label">RFQTS File</label>
+                    {{ form.rfq_file }}
+                    {% if form.rfq_file.errors %}
+                    <div class="text-danger">{{ form.rfq_file.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">Save RFQTS</button>
+                    <a href="{% url 'rfqts_list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Apply Bootstrap classes to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formControls = document.querySelectorAll('input, select, textarea');
+        formControls.forEach(element => {
+            if (!element.classList.contains('form-control') && element.type !== 'file') {
+                element.classList.add('form-control');
+            }
+            if (element.type === 'file') {
+                element.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

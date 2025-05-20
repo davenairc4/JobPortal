@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}RFQTS Details{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <h1 class="mb-4">RFQTS: {{ rfqts.rfqts_no }}</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>General Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Department:</strong></div>
+                        <div class="col-md-8">{{ rfqts.department }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Group:</strong></div>
+                        <div class="col-md-8">{{ rfqts.group }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Directorate:</strong></div>
+                        <div class="col-md-8">{{ rfqts.directorate }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Project Section:</strong></div>
+                        <div class="col-md-8">{{ rfqts.project_section }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Task Title:</strong></div>
+                        <div class="col-md-8">{{ rfqts.task_title }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>RFQTS Type:</strong></div>
+                        <div class="col-md-8">{{ rfqts.rfqts_type }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Dates</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Commencement Date:</strong></div>
+                        <div class="col-md-8">{% if rfqts.commencement_date_for_task %}{{ rfqts.commencement_date_for_task }}{% else %}Not specified{% endif %}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Completion Date:</strong></div>
+                        <div class="col-md-8">{% if rfqts.completion_date_for_task %}{{ rfqts.completion_date_for_task }}{% else %}Not specified{% endif %}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Closing Date for Quotation:</strong></div>
+                        <div class="col-md-8">{% if rfqts.closing_date_for_quotation %}{{ rfqts.closing_date_for_quotation }}{% else %}Not specified{% endif %}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Requirements</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Skills Sets:</strong></div>
+                        <div class="col-md-8">{{ rfqts.skills_sets|linebreaks }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Skills Levels:</strong></div>
+                        <div class="col-md-8">{{ rfqts.skills_levels }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Service Category:</strong></div>
+                        <div class="col-md-8">{{ rfqts.service_category }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Location:</strong></div>
+                        <div class="col-md-8">{{ rfqts.location }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Security Clearances Required:</strong></div>
+                        <div class="col-md-8">{{ rfqts.security_clearances_required_for_personnel }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Task Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Scope of Task:</strong></div>
+                        <div class="col-md-8">{{ rfqts.scope_of_task|linebreaks }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Deliverables:</strong></div>
+                        <div class="col-md-8">{{ rfqts.deliverables|linebreaks }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Specified Personnel:</strong></div>
+                        <div class="col-md-8">{{ rfqts.specified_personnel|linebreaks }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Evaluation Criteria:</strong></div>
+                        <div class="col-md-8">{{ rfqts.evaluation_criteria|linebreaks }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if rfqts.rfq_file %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Attached Files</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>RFQTS File:</strong> <a href="{{ rfqts.rfq_file.url }}" target="_blank">Download</a></p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'create_job_from_rfqts' rfqts.id %}" class="btn btn-success">Create Job from RFQTS</a>
+                        <a href="{% url 'rfqts_list' %}" class="btn btn-secondary">Back to RFQTS List</a>
+                    </div>
+                </div>
+            </div>
+            
+            {% if rfqts.jobs.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Associated Jobs</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                    {% for job in rfqts.jobs.all %}
+                        <li class="list-group-item">
+                            <a href="{% url 'job_detail' job.id %}">{{ job.title }}</a>
+                            <span class="badge bg-{% if job.is_active %}success{% else %}danger{% endif %} float-end">
+                                {% if job.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

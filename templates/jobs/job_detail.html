@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+
+{% block title %}{{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8">
+            <h1 class="mt-4">{{ job.title }}</h1>
+            <div class="mb-4">
+                <span class="badge bg-primary">{{ job.job_type }}</span>
+                <span class="badge bg-secondary">{{ job.location }}</span>
+                {% if job.clearance != "None" %}
+                <span class="badge bg-info">Clearance: {{ job.clearance }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Job Description</h5>
+                </div>
+                <div class="card-body">
+                    {{ job.description|linebreaks }}
+                </div>
+            </div>
+            
+            {% if job.skills_sets %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Required Skills</h5>
+                </div>
+                <div class="card-body">
+                    {{ job.skills_sets|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Job Details</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item"><strong>Salary:</strong> {{ job.salary }}</li>
+                        {% if job.commencement_date %}
+                        <li class="list-group-item"><strong>Start Date:</strong> {{ job.commencement_date }}</li>
+                        {% endif %}
+                        {% if job.completion_date %}
+                        <li class="list-group-item"><strong>End Date:</strong> {{ job.completion_date }}</li>
+                        {% endif %}
+                        {% if job.closing_date %}
+                        <li class="list-group-item"><strong>Application Deadline:</strong> {{ job.closing_date }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            
+            {% if job.positions.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Positions Available</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for position in job.positions.all %}
+                        <li class="list-group-item">{{ position.title }} ({{ position.number_of_positions }} position{{ position.number_of_positions|pluralize }})</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Application Info</h5>
+                </div>
+                <div class="card-body">
+                    {% if job.is_active and not has_applied %}
+                        <p>Ready to apply for this position?</p>
+                        <a href="{% url 'apply_for_job' job.id %}" class="btn btn-success btn-block">Apply Now</a>
+                    {% elif has_applied %}
+                        <div class="alert alert-info">
+                            You have already applied for this job.
+                        </div>
+                        <a href="{% url 'my_applications' %}" class="btn btn-secondary">View Your Application</a>
+                    {% elif not job.is_active %}
+                        <div class="alert alert-warning">
+                            This job is no longer accepting applications.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            {% if job.rfqts %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>RFQTS Information</h5>
+                </div>
+                <div class="card-body">
+                    <p>This job is based on RFQTS: {{ job.rfqts.rfqts_no }}</p>
+                    <a href="{% url 'rfqts_detail' job.rfqts.id %}" class="btn btn-info">View RFQTS Details</a>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if user.is_authenticated and user == job.created_by or user.is_staff %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5>Management</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'view_applications' job.id %}" class="btn btn-primary">View Applications</a>
+                        <a href="{% url 'manage_positions' job.id %}" class="btn btn-secondary">Manage Positions</a>
+                        {% if not job.advertisement %}
+                        <a href="{% url 'create_advertisement' job.id %}" class="btn btn-success">Create Advertisement</a>
+                        {% else %}
+                        <a href="{% url 'edit_advertisement' job.advertisement.id %}" class="btn btn-warning">Edit Advertisement</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

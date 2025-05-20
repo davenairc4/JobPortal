@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}RFQTS List{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>RFQTS List</h1>
+        <a href="{% url 'create_rfqts' %}" class="btn btn-primary">Create New RFQTS</a>
+    </div>
+    
+    {% if rfqts_list %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>RFQTS No.</th>
+                        <th>Task Title</th>
+                        <th>Department</th>
+                        <th>Closing Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rfqts in rfqts_list %}
+                    <tr>
+                        <td>{{ rfqts.rfqts_no }}</td>
+                        <td>{{ rfqts.task_title }}</td>
+                        <td>{{ rfqts.department }}</td>
+                        <td>{% if rfqts.closing_date_for_quotation %}{{ rfqts.closing_date_for_quotation }}{% else %}N/A{% endif %}</td>
+                        <td>
+                            <a href="{% url 'rfqts_detail' rfqts.id %}" class="btn btn-sm btn-info">View</a>
+                            <a href="{% url 'create_job_from_rfqts' rfqts.id %}" class="btn btn-sm btn-success">Create Job</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No RFQTS found. <a href="{% url 'create_rfqts' %}">Create one now</a>.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
