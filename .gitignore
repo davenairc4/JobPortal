@@ -1,0 +1,66 @@
+# Ignore Python compiled files
+*.pyc
+*.pyd
+*.pyo
+__pycache__/
+
+# Ignore local virtual environments
+.venv/
+env/
+venv/
+
+# Ignore environment files
+# *.env
+# *.env.*
+# .env.local
+
+# Ignore logs and database files
+*.log
+*.sqlite3
+*.db
+*.db-shm
+*.db-wal
+
+# PostgreSQL-specific exclusions
+pgdata/
+*.sql
+*.sql.gz
+*.dump
+*.backup
+
+# Ignore development tools and cache
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*.swo
+*.swn
+*.swd
+*.swx
+*.swl
+.npm/
+node_modules/
+coverage/
+htmlcov/
+.cache/
+.tox/
+pytest_cache/
+package-lock.json
+
+# Ignore build artifacts
+dist/
+build/
+*.egg-info/
+.eggs/
+
+# Ignore static and media files (if built separately)
+staticfiles/
+media/
+
+# Ignore Docker and CI/CD files
+docker-compose.override.yml
+*.tar
+*.bak
+*.tmp
+*.backup
+*.old
