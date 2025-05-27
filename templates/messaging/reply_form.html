@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Reply to Message{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Reply to Message</h1>
+    
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5>Original Message</h5>
+        </div>
+        <div class="card-body">
+            <div class="row mb-2">
+                <div class="col-md-3"><strong>From:</strong></div>
+                <div class="col-md-9">{{ original_message.sender.email }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-md-3"><strong>Date:</strong></div>
+                <div class="col-md-9">{{ original_message.timestamp }}</div>
+            </div>
+            {% if original_message.job %}
+            <div class="row mb-2">
+                <div class="col-md-3"><strong>Job:</strong></div>
+                <div class="col-md-9">{{ original_message.job.title }}</div>
+            </div>
+            {% endif %}
+            <hr>
+            <div class="original-message" style="background-color: #f8f9fa; padding: 15px; border-left: 4px solid #007bff;">
+                {{ original_message.content|linebreaks }}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Your Reply</h5>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-info">
+                Replying to: <strong>{{ original_message.sender.email }}</strong>
+            </div>
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <label for="{{ form.content.id_for_label }}" class="form-label">Your Message</label>
+                    {{ form.content }}
+                    {% if form.content.errors %}
+                    <div class="text-danger">{{ form.content.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">Send Reply</button>
+                    <a href="{% url 'message_detail' original_message.id %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Apply Bootstrap classes to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formControls = document.querySelectorAll('textarea');
+        formControls.forEach(element => {
+            if (!element.classList.contains('form-control')) {
+                element.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

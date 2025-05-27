@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}My Applications{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">My Job Applications</h1>
+    
+    {% if applications %}
+        <div class="row">
+            {% for application in applications %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header">
+                            <h5>{{ application.job.title }}</h5>
+                            <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% else %}info{% endif %}">
+                                {{ application.status }}
+                            </span>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Submitted:</strong> {{ application.submission_date|date }}</p>
+                            <p><strong>Location:</strong> {{ application.job.location }}</p>
+                            <p><strong>Job Type:</strong> {{ application.job.job_type }}</p>
+                            {% if application.job.closing_date %}
+                            <p><strong>Closing Date:</strong> {{ application.job.closing_date }}</p>
+                            {% endif %}
+                            <a href="{% url 'application_detail' application.id %}" class="btn btn-primary">View Details</a>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            You haven't applied for any jobs yet. <a href="{% url 'job_list' %}">Browse available jobs</a>.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

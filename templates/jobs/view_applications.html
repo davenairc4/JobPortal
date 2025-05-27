@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Applications for {{ job.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Applications for {{ job.title }}</h1>
+    
+    <div class="mb-3">
+        <a href="{% url 'job_detail' job.id %}" class="btn btn-secondary">Back to Job</a>
+    </div>
+    
+    {% if applications %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Applications ({{ applications.count }})</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Applicant</th>
+                                <th>Submission Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for application in applications %}
+                            <tr>
+                                <td>{{ application.full_name }}</td>
+                                <td>{{ application.submission_date|date }}</td>
+                                <td>
+                                    <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% else %}info{% endif %}">
+                                        {{ application.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'application_detail' application.id %}" class="btn btn-sm btn-primary">View</a>
+                                    <div class="btn-group">
+                                        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            Change Status
+                                        </button>
+                                        <ul class="dropdown-menu">
+                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Pending' %}">Pending</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Reviewing' %}">Reviewing</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Interviewed' %}">Interviewed</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Accepted' %}">Accepted</a></li>
+                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Rejected' %}">Rejected</a></li>
+                                        </ul>
+                                    </div>
+                                    <a href="{% url 'send_message_application' application.user.id application.id %}" class="btn btn-sm btn-info">Message</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No applications have been submitted for this job yet.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

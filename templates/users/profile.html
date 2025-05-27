@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Your Profile</h1>
+    
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Account Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-5"><strong>Email:</strong></div>
+                        <div class="col-md-7">{{ user.email }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-5"><strong>Account Type:</strong></div>
+                        <div class="col-md-7">
+                            {% if user.is_employer and user.is_job_seeker %}
+                            Employer & Job Seeker
+                            {% elif user.is_employer %}
+                            Employer
+                            {% elif user.is_job_seeker %}
+                            Job Seeker
+                            {% else %}
+                            Standard
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-5"><strong>Member Since:</strong></div>
+                        <div class="col-md-7">{{ user.date_joined|date }}</div>
+                    </div>
+                    <div class="d-grid mt-3">
+                        <a href="{% url 'password_change' %}" class="btn btn-outline-secondary">Change Password</a>
+                    </div>
+                </div>
+            </div>
+            
+            {% if user.is_job_seeker %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Job Seeking</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'my_applications' %}" class="btn btn-primary w-100 mb-2">My Applications</a>
+                    <a href="{% url 'job_list' %}" class="btn btn-outline-primary w-100">Browse Jobs</a>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if user.is_employer %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Employer Tools</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'create_job' %}" class="btn btn-success w-100 mb-2">Post a Job</a>
+                    <a href="{% url 'create_rfqts' %}" class="btn btn-primary w-100 mb-2">Create RFQTS</a>
+                    <a href="{% url 'rfqts_list' %}" class="btn btn-outline-primary w-100">View RFQTS List</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Profile Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ profile_form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ profile_form.first_name }}
+                                {% if profile_form.first_name.errors %}
+                                <div class="text-danger">{{ profile_form.first_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ profile_form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ profile_form.last_name }}
+                                {% if profile_form.last_name.errors %}
+                                <div class="text-danger">{{ profile_form.last_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ profile_form.phone_number.id_for_label }}" class="form-label">Phone Number</label>
+                            {{ profile_form.phone_number }}
+                            {% if profile_form.phone_number.errors %}
+                            <div class="text-danger">{{ profile_form.phone_number.errors }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ profile_form.resume.id_for_label }}" class="form-label">Resume</label>
+                            {% if user.profile.resume %}
+                            <div class="mb-2">
+                                Current resume: <a href="{{ user.profile.resume.url }}" target="_blank">{{ user.profile.resume.name }}</a>
+                            </div>
+                            {% endif %}
+                            {{ profile_form.resume }}
+                            {% if profile_form.resume.errors %}
+                            <div class="text-danger">{{ profile_form.resume.errors }}</div>
+                            {% endif %}
+                            <div class="form-text">Upload your resume (PDF, DOC, or DOCX format).</div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <button type="submit" class="btn btn-primary">Save Profile</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Apply Bootstrap classes to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formControls = document.querySelectorAll('input:not([type="file"]), select, textarea');
+        formControls.forEach(element => {
+            if (!element.classList.contains('form-control')) {
+                element.classList.add('form-control');
+            }
+        });
+        
+        const fileInputs = document.querySelectorAll('input[type="file"]');
+        fileInputs.forEach(element => {
+            if (!element.classList.contains('form-control')) {
+                element.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -23,6 +23,19 @@
         footer {
             margin-top: auto;
         }
+        /* Style for logout button to look like a link */
+        .logout-btn {
+            background: none;
+            border: none;
+            padding: 0;
+            color: rgba(255, 255, 255, 0.55);
+            cursor: pointer;
+            text-decoration: none;
+            padding: 0.5rem 0;
+        }
+        .logout-btn:hover {
+            color: rgba(255, 255, 255, 0.75);
+        }
     </style>
 </head>
 <body>
@@ -61,7 +74,10 @@
                             <a class="nav-link" href="{% url 'profile' %}">Profile</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                            <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link logout-btn">Logout</button>
+                            </form>
                         </li>
                         {% else %}
                         <li class="nav-item">

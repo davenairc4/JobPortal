@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Messages{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Messages</h1>
+    
+    <ul class="nav nav-tabs mb-4" id="messagesTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="inbox-tab" data-bs-toggle="tab" data-bs-target="#inbox" type="button" role="tab" aria-controls="inbox" aria-selected="true">
+                Inbox
+                {% if received_messages %}
+                <span class="badge bg-primary">{{ received_messages.count }}</span>
+                {% endif %}
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sent-tab" data-bs-toggle="tab" data-bs-target="#sent" type="button" role="tab" aria-controls="sent" aria-selected="false">
+                Sent
+                {% if sent_messages %}
+                <span class="badge bg-secondary">{{ sent_messages.count }}</span>
+                {% endif %}
+            </button>
+        </li>
+    </ul>
+    
+    <div class="tab-content" id="messagesTabContent">
+        <div class="tab-pane fade show active" id="inbox" role="tabpanel" aria-labelledby="inbox-tab">
+            {% if received_messages %}
+                <div class="list-group">
+                    {% for message in received_messages %}
+                        <a href="{% url 'message_detail' message.id %}" class="list-group-item list-group-item-action {% if not message.is_read %}fw-bold{% endif %}">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">From: {{ message.sender.email }}</h5>
+                                <small>{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"H:i" }}</small>
+                            </div>
+                            <p class="mb-1">
+                                {% if message.job %}
+                                Re: {{ message.job.title }}
+                                {% elif message.application %}
+                                Re: Application for {{ message.application.job.title }}
+                                {% else %}
+                                {{ message.content|truncatechars:100 }}
+                                {% endif %}
+                            </p>
+                            {% if not message.is_read %}
+                            <span class="badge bg-primary">New</span>
+                            {% endif %}
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    You don't have any messages in your inbox.
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="tab-pane fade" id="sent" role="tabpanel" aria-labelledby="sent-tab">
+            {% if sent_messages %}
+                <div class="list-group">
+                    {% for message in sent_messages %}
+                        <a href="{% url 'message_detail' message.id %}" class="list-group-item list-group-item-action">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">To: {{ message.recipient.email }}</h5>
+                                <small>{{ message.timestamp|date:"M d, Y" }} at {{ message.timestamp|time:"H:i" }}</small>
+                            </div>
+                            <p class="mb-1">
+                                {% if message.job %}
+                                Re: {{ message.job.title }}
+                                {% elif message.application %}
+                                Re: Application for {{ message.application.job.title }}
+                                {% else %}
+                                {{ message.content|truncatechars:100 }}
+                                {% endif %}
+                            </p>
+                        </a>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-info">
+                    You haven't sent any messages.
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

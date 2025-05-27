@@ -20,7 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from jobs.views import home
 from debug_toolbar.toolbar import debug_toolbar_urls
-
+from users.views import register  # Add this import
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,8 +28,11 @@ urlpatterns = [
     path('jobs/', include('jobs.urls')),
     path('users/', include('users.urls')),
     path('messaging/', include('messaging.urls')),
+    
+    # Authentication URLs
     path('accounts/', include('django.contrib.auth.urls')),
-]+ debug_toolbar_urls()
+    path('accounts/register/', register, name='register'),  # Add this line
+] + debug_toolbar_urls()
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

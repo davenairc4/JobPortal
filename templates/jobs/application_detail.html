@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+
+{% block title %}Application Details{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8">
+            <h1 class="mb-4">Application Details</h1>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5>Job: {{ application.job.title }}</h5>
+                        <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% else %}info{% endif %}">
+                            {{ application.status }}
+                        </span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Submission Date:</strong></div>
+                        <div class="col-md-8">{{ application.submission_date }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Location:</strong></div>
+                        <div class="col-md-8">{{ application.job.location }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Job Type:</strong></div>
+                        <div class="col-md-8">{{ application.job.job_type }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Applicant Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Full Name:</strong></div>
+                        <div class="col-md-8">{{ application.full_name }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Location:</strong></div>
+                        <div class="col-md-8">{{ application.location_of_residence }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Date of Birth:</strong></div>
+                        <div class="col-md-8">{{ application.date_of_birth }}</div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Clearance Level:</strong></div>
+                        <div class="col-md-8">{{ application.current_clearance }}</div>
+                    </div>
+                    {% if application.clearance_number %}
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Clearance Number:</strong></div>
+                        <div class="col-md-8">{{ application.clearance_number }}</div>
+                    </div>
+                    {% endif %}
+                    {% if application.clearance_expiry_date %}
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Clearance Expiry:</strong></div>
+                        <div class="col-md-8">{{ application.clearance_expiry_date }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Job Preferences</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Earliest Start Date:</strong></div>
+                        <div class="col-md-8">{{ application.earliest_start_date }}</div>
+                    </div>
+                    {% if application.proposed_rate %}
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Proposed Contract Rate:</strong></div>
+                        <div class="col-md-8">{{ application.proposed_rate }}</div>
+                    </div>
+                    {% endif %}
+                    {% if application.proposed_salary %}
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Proposed Annual Salary:</strong></div>
+                        <div class="col-md-8">{{ application.proposed_salary }}</div>
+                    </div>
+                    {% endif %}
+                    {% if application.planned_leave %}
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Planned Leave:</strong></div>
+                        <div class="col-md-8">{{ application.planned_leave }}</div>
+                    </div>
+                    {% endif %}
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>Available for Interview:</strong></div>
+                        <div class="col-md-8">{{ application.available_for_interview }}</div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if application.cover_letter %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Cover Letter</h5>
+                </div>
+                <div class="card-body">
+                    {{ application.cover_letter|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if application.resume %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Resume</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{{ application.resume.url }}" class="btn btn-outline-primary" target="_blank">View Resume</a>
+                    <a href="{{ application.resume.url }}" class="btn btn-outline-secondary" download>Download Resume</a>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if application.messages.all %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5>Messages</h5>
+                </div>
+                <div class="card-body">
+                    {% for message in application.messages.all %}
+                    <div class="message {% if message.sender == user %}message-sent{% else %}message-received{% endif %} mb-3">
+                        <div class="message-header">
+                            <strong>{{ message.sender.email }}</strong> 
+                            <small class="text-muted">{{ message.timestamp }}</small>
+                        </div>
+                        <div class="message-body">
+                            {{ message.content|linebreaks }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    <a href="{% url 'send_message_application' application.user.id application.id %}" class="btn btn-primary">Send Message</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card mb-4 sticky-top" style="top: 10px;">
+                <div class="card-header">
+                    <h5>Actions</h5>
+                </div>
+                <div class="card-body">
+                    {% if user == application.job.created_by or user.is_staff %}
+                    <div class="mb-3">
+                        <label class="form-label">Update Application Status</label>
+                        <div class="d-grid gap-2">
+                            <a href="{% url 'update_application_status' application.id 'Pending' %}" class="btn btn-warning {% if application.status == 'Pending' %}disabled{% endif %}">Mark as Pending</a>
+                            <a href="{% url 'update_application_status' application.id 'Reviewing' %}" class="btn btn-info {% if application.status == 'Reviewing' %}disabled{% endif %}">Mark as Reviewing</a>
+                            <a href="{% url 'update_application_status' application.id 'Interviewed' %}" class="btn btn-primary {% if application.status == 'Interviewed' %}disabled{% endif %}">Mark as Interviewed</a>
+                            <a href="{% url 'update_application_status' application.id 'Accepted' %}" class="btn btn-success {% if application.status == 'Accepted' %}disabled{% endif %}">Accept Application</a>
+                            <a href="{% url 'update_application_status' application.id 'Rejected' %}" class="btn btn-danger {% if application.status == 'Rejected' %}disabled{% endif %}">Reject Application</a>
+                        </div>
+                    </div>
+                    <hr>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'send_message_application' application.user.id application.id %}" class="btn btn-primary">Send Message</a>
+                        
+                        {% if user == application.job.created_by or user.is_staff %}
+                        <a href="{% url 'view_applications' application.job.id %}" class="btn btn-secondary">Back to Applications</a>
+                        {% else %}
+                        <a href="{% url 'my_applications' %}" class="btn btn-secondary">Back to My Applications</a>
+                        {% endif %}
+                        
+                        <a href="{% url 'job_detail' application.job.id %}" class="btn btn-outline-secondary">View Job</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    .message {
+        padding: 10px 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+    }
+    
+    .message-sent {
+        background-color: #e3f2fd;
+        margin-left: 20%;
+    }
+    
+    .message-received {
+        background-color: #f5f5f5;
+        margin-right: 20%;
+    }
+    
+    .message-header {
+        margin-bottom: 5px;
+    }
+</style>
+{% endblock %}

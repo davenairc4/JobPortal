@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Send Message{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Send Message</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Message Details</h5>
+        </div>
+        <div class="card-body">
+            {% if recipient %}
+            <div class="alert alert-info">
+                Sending message to: <strong>{{ recipient.email }}</strong>
+            </div>
+            {% endif %}
+            
+            {% if job %}
+            <div class="alert alert-info">
+                Regarding job: <strong>{{ job.title }}</strong>
+            </div>
+            {% endif %}
+            
+            {% if application %}
+            <div class="alert alert-info">
+                Regarding application for: <strong>{{ application.job.title }}</strong>
+            </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                {% if not recipient %}
+                <div class="mb-3">
+                    <label for="{{ form.recipient.id_for_label }}" class="form-label">To</label>
+                    {{ form.recipient }}
+                    {% if form.recipient.errors %}
+                    <div class="text-danger">{{ form.recipient.errors }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                {% if not job and not application %}
+                <div class="mb-3">
+                    <label for="{{ form.job.id_for_label }}" class="form-label">Related Job (optional)</label>
+                    {{ form.job }}
+                    {% if form.job.errors %}
+                    <div class="text-danger">{{ form.job.errors }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <label for="{{ form.content.id_for_label }}" class="form-label">Message</label>
+                    {{ form.content }}
+                    {% if form.content.errors %}
+                    <div class="text-danger">{{ form.content.errors }}</div>
+                    {% endif %}
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <button type="submit" class="btn btn-primary">Send Message</button>
+                    <a href="{% url 'message_list' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Apply Bootstrap classes to form fields
+    document.addEventListener('DOMContentLoaded', function() {
+        const formControls = document.querySelectorAll('input, select, textarea');
+        formControls.forEach(element => {
+            if (!element.classList.contains('form-control')) {
+                element.classList.add('form-control');
+            }
+        });
+    });
+</script>
+{% endblock %}
