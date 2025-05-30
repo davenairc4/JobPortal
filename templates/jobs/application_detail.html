@@ -1,213 +1,286 @@
 {% extends "base.html" %}
 
-{% block title %}Application Details{% endblock %}
+{% block title %}Application Details - {{ application.job.title }}{% endblock %}
 
 {% block content %}
 <div class="container">
-    <div class="row">
-        <div class="col-md-8">
-            <h1 class="mb-4">Application Details</h1>
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5>Job: {{ application.job.title }}</h5>
-                        <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% else %}info{% endif %}">
-                            {{ application.status }}
-                        </span>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Submission Date:</strong></div>
-                        <div class="col-md-8">{{ application.submission_date }}</div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Location:</strong></div>
-                        <div class="col-md-8">{{ application.job.location }}</div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Job Type:</strong></div>
-                        <div class="col-md-8">{{ application.job.job_type }}</div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Applicant Information</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Full Name:</strong></div>
-                        <div class="col-md-8">{{ application.full_name }}</div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Location:</strong></div>
-                        <div class="col-md-8">{{ application.location_of_residence }}</div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Date of Birth:</strong></div>
-                        <div class="col-md-8">{{ application.date_of_birth }}</div>
-                    </div>
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Clearance Level:</strong></div>
-                        <div class="col-md-8">{{ application.current_clearance }}</div>
-                    </div>
-                    {% if application.clearance_number %}
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Clearance Number:</strong></div>
-                        <div class="col-md-8">{{ application.clearance_number }}</div>
-                    </div>
-                    {% endif %}
-                    {% if application.clearance_expiry_date %}
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Clearance Expiry:</strong></div>
-                        <div class="col-md-8">{{ application.clearance_expiry_date }}</div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Job Preferences</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Earliest Start Date:</strong></div>
-                        <div class="col-md-8">{{ application.earliest_start_date }}</div>
-                    </div>
-                    {% if application.proposed_rate %}
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Proposed Contract Rate:</strong></div>
-                        <div class="col-md-8">{{ application.proposed_rate }}</div>
-                    </div>
-                    {% endif %}
-                    {% if application.proposed_salary %}
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Proposed Annual Salary:</strong></div>
-                        <div class="col-md-8">{{ application.proposed_salary }}</div>
-                    </div>
-                    {% endif %}
-                    {% if application.planned_leave %}
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Planned Leave:</strong></div>
-                        <div class="col-md-8">{{ application.planned_leave }}</div>
-                    </div>
-                    {% endif %}
-                    <div class="row mb-3">
-                        <div class="col-md-4"><strong>Available for Interview:</strong></div>
-                        <div class="col-md-8">{{ application.available_for_interview }}</div>
-                    </div>
-                </div>
-            </div>
-            
-            {% if application.cover_letter %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Cover Letter</h5>
-                </div>
-                <div class="card-body">
-                    {{ application.cover_letter|linebreaks }}
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if application.resume %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Resume</h5>
-                </div>
-                <div class="card-body">
-                    <a href="{{ application.resume.url }}" class="btn btn-outline-primary" target="_blank">View Resume</a>
-                    <a href="{{ application.resume.url }}" class="btn btn-outline-secondary" download>Download Resume</a>
-                </div>
-            </div>
-            {% endif %}
-            
-            {% if application.messages.all %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5>Messages</h5>
-                </div>
-                <div class="card-body">
-                    {% for message in application.messages.all %}
-                    <div class="message {% if message.sender == user %}message-sent{% else %}message-received{% endif %} mb-3">
-                        <div class="message-header">
-                            <strong>{{ message.sender.email }}</strong> 
-                            <small class="text-muted">{{ message.timestamp }}</small>
-                        </div>
-                        <div class="message-body">
-                            {{ message.content|linebreaks }}
-                        </div>
-                    </div>
-                    {% endfor %}
-                    
-                    <a href="{% url 'send_message_application' application.user.id application.id %}" class="btn btn-primary">Send Message</a>
-                </div>
-            </div>
-            {% endif %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Application Details</h1>
+        <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% else %}info{% endif %} fs-6">
+            {{ application.status }}
+        </span>
+    </div>
+    
+    <!-- Job Information -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Job Information</h5>
         </div>
-        
-        <div class="col-md-4">
-            <div class="card mb-4 sticky-top" style="top: 10px;">
-                <div class="card-header">
-                    <h5>Actions</h5>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Job Title:</strong> {{ application.job.title }}</p>
+                    <p><strong>Department:</strong> {{ application.job.rfqts.department|default:"N/A" }}</p>
+                    <p><strong>Location:</strong> {{ application.job.location }}</p>
                 </div>
-                <div class="card-body">
-                    {% if user == application.job.created_by or user.is_staff %}
-                    <div class="mb-3">
-                        <label class="form-label">Update Application Status</label>
-                        <div class="d-grid gap-2">
-                            <a href="{% url 'update_application_status' application.id 'Pending' %}" class="btn btn-warning {% if application.status == 'Pending' %}disabled{% endif %}">Mark as Pending</a>
-                            <a href="{% url 'update_application_status' application.id 'Reviewing' %}" class="btn btn-info {% if application.status == 'Reviewing' %}disabled{% endif %}">Mark as Reviewing</a>
-                            <a href="{% url 'update_application_status' application.id 'Interviewed' %}" class="btn btn-primary {% if application.status == 'Interviewed' %}disabled{% endif %}">Mark as Interviewed</a>
-                            <a href="{% url 'update_application_status' application.id 'Accepted' %}" class="btn btn-success {% if application.status == 'Accepted' %}disabled{% endif %}">Accept Application</a>
-                            <a href="{% url 'update_application_status' application.id 'Rejected' %}" class="btn btn-danger {% if application.status == 'Rejected' %}disabled{% endif %}">Reject Application</a>
-                        </div>
-                    </div>
-                    <hr>
+                <div class="col-md-6">
+                    <p><strong>Job Type:</strong> {{ application.job.job_type }}</p>
+                    <p><strong>Submission Date:</strong> {{ application.submission_date|date:"d/m/Y H:i" }}</p>
+                    {% if application.job.rfqts %}
+                    <p><strong>RFQTS No:</strong> {{ application.job.rfqts.rfqts_no }}</p>
                     {% endif %}
-                    
-                    <div class="d-grid gap-2">
-                        <a href="{% url 'send_message_application' application.user.id application.id %}" class="btn btn-primary">Send Message</a>
-                        
-                        {% if user == application.job.created_by or user.is_staff %}
-                        <a href="{% url 'view_applications' application.job.id %}" class="btn btn-secondary">Back to Applications</a>
-                        {% else %}
-                        <a href="{% url 'my_applications' %}" class="btn btn-secondary">Back to My Applications</a>
-                        {% endif %}
-                        
-                        <a href="{% url 'job_detail' application.job.id %}" class="btn btn-outline-secondary">View Job</a>
-                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<style>
-    .message {
-        padding: 10px 15px;
-        border-radius: 10px;
-        margin-bottom: 10px;
-    }
-    
-    .message-sent {
-        background-color: #e3f2fd;
-        margin-left: 20%;
-    }
-    
-    .message-received {
-        background-color: #f5f5f5;
-        margin-right: 20%;
-    }
-    
-    .message-header {
-        margin-bottom: 5px;
-    }
-</style>
+    <!-- Applicant Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Applicant Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong>Full Name:</strong> {{ application.full_name }}</p>
+                    <p><strong>Email:</strong> {{ application.user.email }}</p>
+                    <p><strong>Location:</strong> {{ application.location_of_residence }}</p>
+                    <p><strong>Current Clearance:</strong> {{ application.current_clearance }}</p>
+                    {% if application.clearance_expiry_date %}
+                    <p><strong>Clearance Expiry:</strong> {{ application.clearance_expiry_date|date:"d/m/Y" }}</p>
+                    {% endif %}
+                    {% if application.agsva_cs_number %}
+                    <p><strong>AGSVA CS Number:</strong> {{ application.agsva_cs_number }}</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <p><strong>Earliest Start Date:</strong> {{ application.earliest_start_date|date:"d/m/Y" }}</p>
+                    <p><strong>Available for Interview:</strong> {{ application.available_for_interview }}</p>
+                    {% if application.proposed_contract_rate %}
+                    <p><strong>Proposed Contract Rate:</strong> {{ application.proposed_contract_rate }}</p>
+                    {% endif %}
+                    {% if application.proposed_annual_salary %}
+                    <p><strong>Proposed Annual Salary:</strong> {{ application.proposed_annual_salary }}</p>
+                    {% endif %}
+                    {% if application.abn %}
+                    <p><strong>ABN:</strong> {{ application.abn }}</p>
+                    {% endif %}
+                    {% if application.planned_leave %}
+                    <p><strong>Planned Leave:</strong> {{ application.planned_leave }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Experience Questions -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Experience Responses</h5>
+        </div>
+        <div class="card-body">
+            <h6>1. Industry Engagement Experience</h6>
+            <p class="ps-3">{{ application.industry_engagement_experience|linebreaks }}</p>
+            
+            <h6>2. Project Expectations</h6>
+            <p class="ps-3">{{ application.project_expectations|linebreaks }}</p>
+            
+            <h6>3. Qualifications and Certifications</h6>
+            <p class="ps-3">{{ application.qualifications_certifications|linebreaks }}</p>
+        </div>
+    </div>
+
+    <!-- References -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">References</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Referee 1</h6>
+                    <p><strong>Name:</strong> {{ application.referee1_name }}</p>
+                    <p><strong>Email:</strong> {{ application.referee1_email }}</p>
+                    <p><strong>Phone:</strong> {{ application.referee1_phone }}</p>
+                    <p><strong>Services Performed:</strong><br>{{ application.referee1_description }}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6>Referee 2</h6>
+                    <p><strong>Name:</strong> {{ application.referee2_name }}</p>
+                    <p><strong>Email:</strong> {{ application.referee2_email }}</p>
+                    <p><strong>Phone:</strong> {{ application.referee2_phone }}</p>
+                    <p><strong>Services Performed:</strong><br>{{ application.referee2_description }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    {% if application.additional_materials or application.unique_skills %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Additional Information</h5>
+        </div>
+        <div class="card-body">
+            {% if application.additional_materials %}
+            <h6>Additional Materials</h6>
+            <p>{{ application.additional_materials|linebreaks }}</p>
+            {% endif %}
+            
+            {% if application.unique_skills %}
+            <h6>Unique Skills or Experience</h6>
+            <p>{{ application.unique_skills|linebreaks }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Conflict of Interest -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Conflict of Interest Declarations</h5>
+        </div>
+        <div class="card-body">
+            <h6>Role Conflicts</h6>
+            <ul class="list-unstyled">
+                <li>Worked on this project (last 6 months): <strong>{{ application.worked_on_project|yesno:"Yes,No" }}</strong></li>
+                <li>Worked on this requirement (last 12 months): <strong>{{ application.worked_on_requirement|yesno:"Yes,No" }}</strong></li>
+                <li>Involved in service provider selection: <strong>{{ application.involved_in_selection|yesno:"Yes,No" }}</strong></li>
+                <li>Potential conflict of interest: <strong>{{ application.potential_conflict|yesno:"Yes,No" }}</strong></li>
+            </ul>
+            
+            <h6 class="mt-3">APS Employment</h6>
+            <ul class="list-unstyled">
+                <li>Currently employed as Public Servant: <strong>{{ application.currently_aps|yesno:"Yes,No" }}</strong></li>
+                <li>Employed as Public Servant (last 12 months): <strong>{{ application.aps_within_12_months|yesno:"Yes,No" }}</strong></li>
+            </ul>
+            
+            {% if application.aps_within_12_months %}
+            <div class="ps-3">
+                <p><strong>APS Engagement Details:</strong> {{ application.aps_engagement_details }}</p>
+                <p><strong>Employment Period:</strong> {{ application.aps_employment_from|date:"d/m/Y" }} - {{ application.aps_employment_to|date:"d/m/Y" }}</p>
+                {% if application.aps_resignation_evidence %}
+                <p><strong>Resignation Evidence:</strong> <a href="{{ application.aps_resignation_evidence.url }}" target="_blank">View Document</a></p>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            <h6 class="mt-3">SERCAT Employment</h6>
+            <ul class="list-unstyled">
+                <li>Currently SERCAT 1, 6 or 7: <strong>{{ application.currently_sercat|yesno:"Yes,No" }}</strong></li>
+                <li>SERCAT employed (last 12 months): <strong>{{ application.sercat_within_12_months|yesno:"Yes,No" }}</strong></li>
+            </ul>
+            
+            {% if application.sercat_within_12_months %}
+            <div class="ps-3">
+                <p><strong>SERCAT Engagement Details:</strong> {{ application.sercat_engagement_details }}</p>
+                <p><strong>Employment Period:</strong> {{ application.sercat_employment_from|date:"d/m/Y" }} - {{ application.sercat_employment_to|date:"d/m/Y" }}</p>
+                {% if application.sercat_separation_evidence %}
+                <p><strong>Separation Evidence:</strong> <a href="{{ application.sercat_separation_evidence.url }}" target="_blank">View Document</a></p>
+                {% endif %}
+            </div>
+            {% endif %}
+            
+            {% if requires_waiver %}
+            <div class="alert alert-warning mt-3">
+                <strong>Note:</strong> This application requires a waiver due to recent APS/SERCAT employment.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Application Confirmations -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Application Confirmations</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled">
+                <li>✓ Application written in 3rd person: <strong>{{ application.written_third_person|yesno:"Confirmed,Not Confirmed" }}</strong></li>
+                <li>✓ CV has no gaps: <strong>{{ application.cv_no_gaps|yesno:"Confirmed,Not Confirmed" }}</strong></li>
+                <li>✓ Month and year listed for each role: <strong>{{ application.cv_month_year_listed|yesno:"Confirmed,Not Confirmed" }}</strong></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Documents -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Submitted Documents</h5>
+        </div>
+        <div class="card-body">
+            {% if application.resume %}
+            <p><strong>Resume:</strong> <a href="{{ application.resume.url }}" target="_blank" class="btn btn-sm btn-outline-primary">Download Resume</a></p>
+            {% endif %}
+            
+            {% if application.cover_letter %}
+            <h6>Cover Letter</h6>
+            <div class="border p-3 bg-light">
+                {{ application.cover_letter|linebreaks }}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Declaration and Signature -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Declaration and Signature</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Electronic Signature:</strong> {{ application.electronic_signature }}</p>
+            <p><strong>Signature Date:</strong> {{ application.signature_date|date:"d/m/Y" }}</p>
+            
+            <h6 class="mt-3">Declarations</h6>
+            <ul class="list-unstyled">
+                <li>✓ Information is complete and correct: <strong>{{ application.declaration_complete_correct|yesno:"Acknowledged,Not Acknowledged" }}</strong></li>
+                <li>✓ No applications through other agencies: <strong>{{ application.declaration_no_other_applications|yesno:"Acknowledged,Not Acknowledged" }}</strong></li>
+                <li>✓ Understands false information is grounds for dismissal: <strong>{{ application.understand_false_info|yesno:"Acknowledged,Not Acknowledged" }}</strong></li>
+                <li>✓ Understands additional enquiries may be made: <strong>{{ application.understand_additional_enquiries|yesno:"Acknowledged,Not Acknowledged" }}</strong></li>
+                {% if application.understand_waiver_approval %}
+                <li>✓ Understands waiver approval timeframe: <strong>Acknowledged</strong></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    {% if is_applicant %}
+                    <a href="{% url 'my_applications' %}" class="btn btn-secondary">Back to My Applications</a>
+                    {% endif %}
+                    
+                    {% if is_employer %}
+                    <a href="{% url 'view_applications' application.job.id %}" class="btn btn-secondary">Back to Applications</a>
+                    {% endif %}
+                </div>
+                
+                {% if is_employer %}
+                <div>
+                    <form method="post" action="{% url 'update_application_status' application.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <div class="input-group">
+                            <select name="status" class="form-select">
+                                {% for status_code, status_name in application.APPLICATION_STATUS %}
+                                <option value="{{ status_code }}" {% if status_code == application.status %}selected{% endif %}>
+                                    {{ status_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="submit" class="btn btn-primary">Update Status</button>
+                        </div>
+                    </form>
+                    
+                    <a href="{% url 'download_application' application.id %}" class="btn btn-info ms-2">
+                        <i class="bi bi-download"></i> Export
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

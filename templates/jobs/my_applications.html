@@ -5,35 +5,189 @@
 {% block content %}
 <div class="container">
     <h1 class="mb-4">My Job Applications</h1>
-    
-    {% if applications %}
+
+    <!-- Filter by Status -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="status" class="form-label">Filter by Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">All Applications</option>
+                        {% for status_code, status_name in status_choices %}
+                        <option value="{{ status_code }}" {% if status_code == current_status %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    {% if page_obj.object_list %}
+        <!-- Applications Grid -->
         <div class="row">
-            {% for application in applications %}
+            {% for application in page_obj.object_list %}
                 <div class="col-md-6 mb-4">
-                    <div class="card h-100">
-                        <div class="card-header">
-                            <h5>{{ application.job.title }}</h5>
-                            <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% else %}info{% endif %}">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">{{ application.job.title }}</h5>
+                            <span class="badge bg-{% if application.status == 'Pending' %}warning text-dark{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% elif application.status == 'Reviewing' %}info{% else %}primary{% endif %}">
                                 {{ application.status }}
                             </span>
                         </div>
                         <div class="card-body">
-                            <p><strong>Submitted:</strong> {{ application.submission_date|date }}</p>
-                            <p><strong>Location:</strong> {{ application.job.location }}</p>
-                            <p><strong>Job Type:</strong> {{ application.job.job_type }}</p>
+                            <div class="mb-3">
+                                <p class="mb-1"><strong>Company:</strong> {{ application.job.rfqts.department|default:"Not specified" }}</p>
+                                <p class="mb-1"><strong>Location:</strong> {{ application.job.location }}</p>
+                                <p class="mb-1"><strong>Job Type:</strong> {{ application.job.job_type }}</p>
+                                <p class="mb-1"><strong>Submitted:</strong> {{ application.submission_date|date:"d/m/Y" }}</p>
+                            </div>
+
                             {% if application.job.closing_date %}
-                            <p><strong>Closing Date:</strong> {{ application.job.closing_date }}</p>
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar-check"></i>
+                                    Application Deadline: {{ application.job.closing_date|date:"d/m/Y" }}
+                                </small>
+                            </div>
                             {% endif %}
-                            <a href="{% url 'application_detail' application.id %}" class="btn btn-primary">View Details</a>
+
+                            <!-- Status-specific messages -->
+                            {% if application.status == 'Pending' %}
+                            <div class="alert alert-warning py-2 mb-3">
+                                <small>Your application is being reviewed by the employer.</small>
+                            </div>
+                            {% elif application.status == 'Reviewing' %}
+                            <div class="alert alert-info py-2 mb-3">
+                                <small>Your application is under active review.</small>
+                            </div>
+                            {% elif application.status == 'Interviewed' %}
+                            <div class="alert alert-primary py-2 mb-3">
+                                <small>You have been interviewed for this position.</small>
+                            </div>
+                            {% elif application.status == 'Accepted' %}
+                            <div class="alert alert-success py-2 mb-3">
+                                <small>Congratulations! Your application has been accepted.</small>
+                            </div>
+                            {% elif application.status == 'Rejected' %}
+                            <div class="alert alert-danger py-2 mb-3">
+                                <small>Unfortunately, your application was not successful.</small>
+                            </div>
+                            {% endif %}
+
+                            <!-- Conflict/Waiver Warnings -->
+                            {% if application.currently_aps or application.aps_within_12_months or application.currently_sercat or application.sercat_within_12_months %}
+                            <div class="mb-2">
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-exclamation-triangle"></i> Waiver Required
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'application_detail' application.id %}" class="btn btn-primary">
+                                    View Application Details
+                                </a>
+                                <a href="{% url 'job_detail' application.job.id %}" class="btn btn-outline-secondary btn-sm">
+                                    View Job Posting
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             {% endfor %}
         </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Applications pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}">{{ num }}</a>
+                </li>
+                {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     {% else %}
+        <!-- No Applications Message -->
         <div class="alert alert-info">
-            You haven't applied for any jobs yet. <a href="{% url 'job_list' %}">Browse available jobs</a>.
+            <h4 class="alert-heading">No Applications Found</h4>
+            {% if current_status %}
+            <p>You don't have any applications with status "{{ current_status }}".</p>
+            <a href="{% url 'my_applications' %}" class="btn btn-primary">View All Applications</a>
+            {% else %}
+            <p>You haven't applied for any jobs yet.</p>
+            <p class="mb-0">Start your job search and find your next opportunity!</p>
+            <hr>
+            <a href="{% url 'job_list' %}" class="btn btn-primary">Browse Available Jobs</a>
+            {% endif %}
         </div>
     {% endif %}
+
+    <!-- Application Statistics -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Application Summary</h5>
+        </div>
+        <div class="card-body">
+            <p>Track your application progress and stay informed about your job search.</p>
+            <div class="row text-center">
+                <div class="col">
+                    <h4>{{ page_obj.paginator.count }}</h4>
+                    <p class="text-muted">Total Applications</p>
+                </div>
+                <div class="col">
+                    <h4 class="text-warning">{{ pending_count }}</h4>
+                    <p class="text-muted">Pending Review</p>
+                </div>
+                <div class="col">
+                    <h4 class="text-success">{{ accepted_count }}</h4>
+                    <p class="text-muted">Accepted</p>
+                </div>
+                <div class="col">
+                    <h4 class="text-danger">{{ rejected_count }}</h4>
+                    <p class="text-muted">Rejected</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('status').addEventListener('change', function () {
+        this.form.submit();
+    });
+});
+</script>
 {% endblock %}

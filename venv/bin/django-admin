@@ -1,4 +1,4 @@
-#!/home/tester02/Repos/JobPortal/venv/bin/python3
+#!/Users/davenair/Documents/Repos/JobPortal/JobPortal/venv/bin/python3.13
 # -*- coding: utf-8 -*-
 import re
 import sys

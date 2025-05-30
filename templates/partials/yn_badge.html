@@ -1,0 +1,11 @@
+{% if val %}
+<div class="row mb-2">
+  <div class="col-md-8">{{ lbl }}:</div>
+  <div class="col-md-4"><span class="badge badge-yes">Yes</span></div>
+</div>
+{% else %}
+<div class="row mb-2">
+  <div class="col-md-8">{{ lbl }}:</div>
+  <div class="col-md-4"><span class="badge badge-no">No</span></div>
+</div>
+{% endif %}

@@ -3,182 +3,717 @@
 {% block title %}Apply for {{ job.title }}{% endblock %}
 
 {% block content %}
-<div class="container">
+<div class="container-fluid">
     <h1 class="mb-4">Apply for {{ job.title }}</h1>
-    
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5>Job Details</h5>
-        </div>
-        <div class="card-body">
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Job Title:</strong></div>
-                <div class="col-md-9">{{ job.title }}</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Location:</strong></div>
-                <div class="col-md-9">{{ job.location }}</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Job Type:</strong></div>
-                <div class="col-md-9">{{ job.job_type }}</div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Salary:</strong></div>
-                <div class="col-md-9">{{ job.salary }}</div>
-            </div>
-            {% if job.closing_date %}
-            <div class="row mb-3">
-                <div class="col-md-3"><strong>Application Deadline:</strong></div>
-                <div class="col-md-9">{{ job.closing_date }}</div>
-            </div>
-            {% endif %}
-        </div>
+
+    <div class="alert alert-info mb-4">
+        <strong>Important:</strong> Please ensure all responses are written in third person (use your name instead of “I”, “my”, etc.)
     </div>
-    
-    <div class="card">
-        <div class="card-header">
-            <h5>Application Form</h5>
-        </div>
-        <div class="card-body">
-            <form method="post" enctype="multipart/form-data">
+
+    <div class="row">
+        <!-- ───────────────── LEFT COLUMN ────────────────── -->
+        <div class="col-lg-8 col-md-12">
+            <form method="post" enctype="multipart/form-data" id="applicationForm">
                 {% csrf_token %}
-                
-                <div class="mb-3">
-                    <label for="{{ form.full_name.id_for_label }}" class="form-label">Full Name</label>
-                    {{ form.full_name }}
-                    {% if form.full_name.errors %}
-                    <div class="text-danger">{{ form.full_name.errors }}</div>
-                    {% endif %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <h6 class="alert-heading">Please correct the following errors:</h6>
+                    <ul class="mb-0">
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                            <li><strong>{{ field|title }}:</strong> {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.current_clearance.id_for_label }}" class="form-label">Current Level of Defence Clearance</label>
-                        {{ form.current_clearance }}
-                        {% if form.current_clearance.errors %}
-                        <div class="text-danger">{{ form.current_clearance.errors }}</div>
-                        {% endif %}
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    {% for error in form.non_field_errors %}
+                        <p class="mb-0">{{ error }}</p>
+                    {% endfor %}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                {% endif %}
+
+                <!-- ───────────── Job Details ───────────── -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Job Details</h5>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.clearance_expiry_date.id_for_label }}" class="form-label">Defence Clearance Expiry Date</label>
-                        {{ form.clearance_expiry_date }}
-                        {% if form.clearance_expiry_date.errors %}
-                        <div class="text-danger">{{ form.clearance_expiry_date.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.clearance_number.id_for_label }}" class="form-label">AGVSA CS Number</label>
-                    {{ form.clearance_number }}
-                    {% if form.clearance_number.errors %}
-                    <div class="text-danger">{{ form.clearance_number.errors }}</div>
-                    {% endif %}
-                </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.location_of_residence.id_for_label }}" class="form-label">Location of Residence</label>
-                    {{ form.location_of_residence }}
-                    {% if form.location_of_residence.errors %}
-                    <div class="text-danger">{{ form.location_of_residence.errors }}</div>
-                    {% endif %}
-                </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">Date of Birth</label>
-                        {{ form.date_of_birth }}
-                        {% if form.date_of_birth.errors %}
-                        <div class="text-danger">{{ form.date_of_birth.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.earliest_start_date.id_for_label }}" class="form-label">Earliest Start Date</label>
-                        {{ form.earliest_start_date }}
-                        {% if form.earliest_start_date.errors %}
-                        <div class="text-danger">{{ form.earliest_start_date.errors }}</div>
-                        {% endif %}
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <p><strong>Role Title:</strong> {{ job.title }}</p>
+                                <p><strong>Department:</strong> {{ job.rfqts.department|default:"N/A" }}</p>
+                                <p><strong>Location:</strong> {{ job.location }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><strong>Duration:</strong> {{ job.commencement_date|date:"d/m/Y" }} – {{ job.completion_date|date:"d/m/Y" }}</p>
+                                <p><strong>Application Deadline:</strong> {{ job.closing_date|date:"d/m/Y" }}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.proposed_rate.id_for_label }}" class="form-label">Proposed Contract Rate</label>
-                        {{ form.proposed_rate }}
-                        {% if form.proposed_rate.errors %}
-                        <div class="text-danger">{{ form.proposed_rate.errors }}</div>
-                        {% endif %}
+
+                <!-- ────────── Applicant Details ────────── -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Applicant Details</h5>
                     </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.proposed_salary.id_for_label }}" class="form-label">Proposed Annual Salary</label>
-                        {{ form.proposed_salary }}
-                        {% if form.proposed_salary.errors %}
-                        <div class="text-danger">{{ form.proposed_salary.errors }}</div>
-                        {% endif %}
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.full_name.id_for_label }}" class="form-label">
+                                    Full Name (First, Middle, Last) <span class="text-danger">*</span>
+                                </label>
+                                {{ form.full_name }}
+                                {% if form.full_name.errors %}<div class="text-danger">{{ form.full_name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.current_clearance.id_for_label }}" class="form-label">
+                                    Current Level of Defence Clearance <span class="text-danger">*</span>
+                                </label>
+                                {{ form.current_clearance }}
+                                {% if form.current_clearance.errors %}<div class="text-danger">{{ form.current_clearance.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.clearance_expiry_date.id_for_label }}" class="form-label">
+                                    Defence Clearance Expiry Date (if known)
+                                </label>
+                                {{ form.clearance_expiry_date }}
+                                {% if form.clearance_expiry_date.errors %}<div class="text-danger">{{ form.clearance_expiry_date.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.agsva_cs_number.id_for_label }}" class="form-label">
+                                    AGSVA CS Number (for Defence Clearance Check)
+                                </label>
+                                {{ form.agsva_cs_number }} <small class="text-muted">{{ form.agsva_cs_number.help_text }}</small>
+                                {% if form.agsva_cs_number.errors %}<div class="text-danger">{{ form.agsva_cs_number.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.date_of_birth.id_for_label }}" class="form-label">
+                                    Date of Birth
+                                </label>
+                                {{ form.date_of_birth }} <small class="text-muted">{{ form.date_of_birth.help_text }}</small>
+                                {% if form.date_of_birth.errors %}<div class="text-danger">{{ form.date_of_birth.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.location_of_residence.id_for_label }}" class="form-label">
+                                    Location of residence (city, state) <span class="text-danger">*</span>
+                                </label>
+                                {{ form.location_of_residence }}
+                                {% if form.location_of_residence.errors %}<div class="text-danger">{{ form.location_of_residence.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.earliest_start_date.id_for_label }}" class="form-label">
+                                    Earliest date you can start work <span class="text-danger">*</span>
+                                </label>
+                                {{ form.earliest_start_date }}
+                                {% if form.earliest_start_date.errors %}<div class="text-danger">{{ form.earliest_start_date.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.available_for_interview.id_for_label }}" class="form-label">
+                                    Available for interview? Phone/In-person? <span class="text-danger">*</span>
+                                </label>
+                                {{ form.available_for_interview }}
+                                {% if form.available_for_interview.errors %}<div class="text-danger">{{ form.available_for_interview.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.proposed_contract_rate.id_for_label }}" class="form-label">
+                                    Proposed contract rate (per day, ex GST)
+                                </label>
+                                {{ form.proposed_contract_rate }}
+                                {% if form.proposed_contract_rate.errors %}<div class="text-danger">{{ form.proposed_contract_rate.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.abn.id_for_label }}" class="form-label">
+                                    ABN (if contracting)
+                                </label>
+                                {{ form.abn }}
+                                {% if form.abn.errors %}<div class="text-danger">{{ form.abn.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.proposed_annual_salary.id_for_label }}" class="form-label">
+                                    Proposed annual salary (including Super)
+                                </label>
+                                {{ form.proposed_annual_salary }}
+                                {% if form.proposed_annual_salary.errors %}<div class="text-danger">{{ form.proposed_annual_salary.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.planned_leave.id_for_label }}" class="form-label">
+                                Any planned leave?
+                            </label>
+                            {{ form.planned_leave }}
+                            {% if form.planned_leave.errors %}<div class="text-danger">{{ form.planned_leave.errors.0 }}</div>{% endif %}
+                        </div>
                     </div>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.planned_leave.id_for_label }}" class="form-label">Any Planned Leave</label>
-                    {{ form.planned_leave }}
-                    {% if form.planned_leave.errors %}
-                    <div class="text-danger">{{ form.planned_leave.errors }}</div>
-                    {% endif %}
+
+                <!-- ─────── Experience Questions ─────── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">Experience Questions</h5></div>
+                    <div class="card-body">
+                        <div class="alert alert-warning mb-3">
+                            <strong>Reminder:</strong> Write all responses in 3rd person (e.g., “John has 5 years experience …”).
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.industry_engagement_experience.id_for_label }}" class="form-label">
+                                1. Describe your level of knowledge and experience in relation to Industry Engagement Management within Defence, Government or similar industry
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.industry_engagement_experience }}
+                            {% if form.industry_engagement_experience.errors %}<div class="text-danger">{{ form.industry_engagement_experience.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.project_expectations.id_for_label }}" class="form-label">
+                                2. Describe your expectations on joining the project <span class="text-danger">*</span>
+                            </label>
+                            {{ form.project_expectations }}
+                            {% if form.project_expectations.errors %}<div class="text-danger">{{ form.project_expectations.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.qualifications_certifications.id_for_label }}" class="form-label">
+                                3. Provide details of your qualifications and industry certifications that are relevant to the role <span class="text-danger">*</span>
+                            </label>
+                            {{ form.qualifications_certifications }}
+                            {% if form.qualifications_certifications.errors %}<div class="text-danger">{{ form.qualifications_certifications.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.available_for_interview.id_for_label }}" class="form-label">Available for Interview</label>
-                    {{ form.available_for_interview }}
-                    {% if form.available_for_interview.errors %}
-                    <div class="text-danger">{{ form.available_for_interview.errors }}</div>
-                    {% endif %}
+
+                <!-- ───────────── References ───────────── -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">4. References</h5>
+                        <small class="text-muted">Provide at least 2 referees for whom you performed similar services within the last 3 years</small>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="mb-3">Referee 1</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.referee1_name.id_for_label }}" class="form-label">Name and Title <span class="text-danger">*</span></label>
+                                {{ form.referee1_name }}
+                                {% if form.referee1_name.errors %}<div class="text-danger">{{ form.referee1_name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.referee1_email.id_for_label }}" class="form-label">Email <span class="text-danger">*</span></label>
+                                {{ form.referee1_email }}
+                                {% if form.referee1_email.errors %}<div class="text-danger">{{ form.referee1_email.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.referee1_phone.id_for_label }}" class="form-label">Telephone <span class="text-danger">*</span></label>
+                                {{ form.referee1_phone }}
+                                {% if form.referee1_phone.errors %}<div class="text-danger">{{ form.referee1_phone.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label for="{{ form.referee1_description.id_for_label }}" class="form-label">
+                                Brief description of services performed <span class="text-danger">*</span>
+                            </label>
+                            {{ form.referee1_description }}
+                            {% if form.referee1_description.errors %}<div class="text-danger">{{ form.referee1_description.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <h6 class="mb-3">Referee 2</h6>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.referee2_name.id_for_label }}" class="form-label">Name and Title <span class="text-danger">*</span></label>
+                                {{ form.referee2_name }}
+                                {% if form.referee2_name.errors %}<div class="text-danger">{{ form.referee2_name.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.referee2_email.id_for_label }}" class="form-label">Email <span class="text-danger">*</span></label>
+                                {{ form.referee2_email }}
+                                {% if form.referee2_email.errors %}<div class="text-danger">{{ form.referee2_email.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.referee2_phone.id_for_label }}" class="form-label">Telephone <span class="text-danger">*</span></label>
+                                {{ form.referee2_phone }}
+                                {% if form.referee2_phone.errors %}<div class="text-danger">{{ form.referee2_phone.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.referee2_description.id_for_label }}" class="form-label">
+                                Brief description of services performed <span class="text-danger">*</span>
+                            </label>
+                            {{ form.referee2_description }}
+                            {% if form.referee2_description.errors %}<div class="text-danger">{{ form.referee2_description.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.cover_letter.id_for_label }}" class="form-label">Cover Letter</label>
-                    {{ form.cover_letter }}
-                    {% if form.cover_letter.errors %}
-                    <div class="text-danger">{{ form.cover_letter.errors }}</div>
-                    {% endif %}
+
+                <!-- ────── Application Confirmation ────── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">5. Application Confirmation</h5></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            {{ form.written_third_person }}
+                            <label class="form-check-label" for="{{ form.written_third_person.id_for_label }}">
+                                {{ form.written_third_person.label }}
+                            </label>
+                            {% if form.written_third_person.errors %}<div class="text-danger">{{ form.written_third_person.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ form.cv_no_gaps }}
+                            <label class="form-check-label" for="{{ form.cv_no_gaps.id_for_label }}">
+                                {{ form.cv_no_gaps.label }}
+                            </label>
+                            {% if form.cv_no_gaps.errors %}<div class="text-danger">{{ form.cv_no_gaps.errors.0 }}</div>{% endif %}
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ form.cv_month_year_listed }}
+                            <label class="form-check-label" for="{{ form.cv_month_year_listed.id_for_label }}">
+                                {{ form.cv_month_year_listed.label }}
+                            </label>
+                            {% if form.cv_month_year_listed.errors %}<div class="text-danger">{{ form.cv_month_year_listed.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="mb-3">
-                    <label for="{{ form.resume.id_for_label }}" class="form-label">Resume</label>
-                    {{ form.resume }}
-                    {% if form.resume.errors %}
-                    <div class="text-danger">{{ form.resume.errors }}</div>
-                    {% endif %}
-                    <div class="form-text">Upload your resume (PDF, DOC, or DOCX format).</div>
+
+                <!-- ───────── Additional Information ───────── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">6. Additional Information</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.additional_materials.id_for_label }}" class="form-label">
+                                Additional materials to include with your application
+                            </label>
+                            <small class="text-muted d-block mb-2">{{ form.additional_materials.help_text }}</small>
+                            {{ form.additional_materials }}
+                            {% if form.additional_materials.errors %}<div class="text-danger">{{ form.additional_materials.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.unique_skills.id_for_label }}" class="form-label">
+                                7. Unique skills or experience
+                            </label>
+                            <small class="text-muted d-block mb-2">{{ form.unique_skills.help_text }}</small>
+                            {{ form.unique_skills }}
+                            {% if form.unique_skills.errors %}<div class="text-danger">{{ form.unique_skills.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
                 </div>
-                
-                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <button type="submit" class="btn btn-primary">Submit Application</button>
-                    <a href="{% url 'job_detail' job.id %}" class="btn btn-secondary">Cancel</a>
+
+                <!-- ───── Role Conflict of Interest ───── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">Role Conflict of Interest</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                1. For the Project detailed on this form, have you been working on this Project in any capacity within the last 6 months?
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.worked_on_project }}</div>
+                            {% if form.worked_on_project.errors %}<div class="text-danger">{{ form.worked_on_project.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                2. For the specific requirement detailed on this form, have you been working on this requirement in any capacity within the last 12 months?
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.worked_on_requirement }}</div>
+                            {% if form.worked_on_requirement.errors %}<div class="text-danger">{{ form.worked_on_requirement.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                3. For roles completed within the past 6 months, have you been involved in the selection of the associated Service Providers in any capacity?
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.involved_in_selection }}</div>
+                            {% if form.involved_in_selection.errors %}<div class="text-danger">{{ form.involved_in_selection.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                4. Is there a potential for a real or perceived conflict of interest or a probity objection if you perform or contribute to the Project?
+                                <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.potential_conflict }}</div>
+                            {% if form.potential_conflict.errors %}<div class="text-danger">{{ form.potential_conflict.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ───── APS Conflict of Interest ───── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">APS Defence Conflict of Interest</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                5. Are you currently employed in Defence as a Public Servant? <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.currently_aps }}</div>
+                            <small class="text-muted">If YES, you are unable to apply for the contract position.</small>
+                            {% if form.currently_aps.errors %}<div class="text-danger">{{ form.currently_aps.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                6. Have you been employed in Defence as a Public Servant within the last 12 months? <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.aps_within_12_months }}</div>
+                            {% if form.aps_within_12_months.errors %}<div class="text-danger">{{ form.aps_within_12_months.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div id="apsDetails" style="display:none;">
+                            <div class="alert alert-info">
+                                If YES, a waiver will be required, therefore please provide the following:
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.aps_engagement_details.id_for_label }}" class="form-label">
+                                    a. Details of your most recent area of engagement:
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.aps_engagement_details }}
+                                {% if form.aps_engagement_details.errors %}<div class="text-danger">{{ form.aps_engagement_details.errors.0 }}</div>{% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.aps_employment_from.id_for_label }}" class="form-label">
+                                        b. Employment Period – From: <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.aps_employment_from }}
+                                    {% if form.aps_employment_from.errors %}<div class="text-danger">{{ form.aps_employment_from.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.aps_employment_to.id_for_label }}" class="form-label">To: <span class="text-danger">*</span></label>
+                                    {{ form.aps_employment_to }}
+                                    {% if form.aps_employment_to.errors %}<div class="text-danger">{{ form.aps_employment_to.errors.0 }}</div>{% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.aps_resignation_evidence.id_for_label }}" class="form-label">
+                                    c. Evidence of Resignation from the APS is required and attached to this form. <span class="text-danger">*</span>
+                                </label>
+                                {{ form.aps_resignation_evidence }}
+                                {% if form.aps_resignation_evidence.errors %}<div class="text-danger">{{ form.aps_resignation_evidence.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ───── SERCAT Conflict of Interest ───── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">Australian Defence Force (ADF) Conflict of Interest</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">
+                                7. Are you currently employed in Defence as SERCAT 1, 6 or 7? <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.currently_sercat }}</div>
+                            <small class="text-muted">If YES, you are unable to apply for the contract position.</small>
+                            {% if form.currently_sercat.errors %}<div class="text-danger">{{ form.currently_sercat.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">
+                                8. Have you been employed (excluding SERCAT 2-5) in the ADF within the last 12 months? <span class="text-danger">*</span>
+                            </label>
+                            <div>{{ form.sercat_within_12_months }}</div>
+                            {% if form.sercat_within_12_months.errors %}<div class="text-danger">{{ form.sercat_within_12_months.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div id="sercatDetails" style="display:none;">
+                            <div class="alert alert-info">If YES, a waiver will be required, therefore please provide the following:</div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.sercat_engagement_details.id_for_label }}" class="form-label">
+                                    a. Details of your most recent engagement: <span class="text-danger">*</span>
+                                </label>
+                                {{ form.sercat_engagement_details }}
+                                {% if form.sercat_engagement_details.errors %}<div class="text-danger">{{ form.sercat_engagement_details.errors.0 }}</div>{% endif %}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.sercat_employment_from.id_for_label }}" class="form-label">
+                                        b. Employment Period – From: <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.sercat_employment_from }}
+                                    {% if form.sercat_employment_from.errors %}<div class="text-danger">{{ form.sercat_employment_from.errors.0 }}</div>{% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.sercat_employment_to.id_for_label }}" class="form-label">To: <span class="text-danger">*</span></label>
+                                    {{ form.sercat_employment_to }}
+                                    {% if form.sercat_employment_to.errors %}<div class="text-danger">{{ form.sercat_employment_to.errors.0 }}</div>{% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ form.sercat_separation_evidence.id_for_label }}" class="form-label">
+                                    c. Evidence of Separation from ADF is required and attached to this form. <span class="text-danger">*</span>
+                                </label>
+                                {{ form.sercat_separation_evidence }}
+                                {% if form.sercat_separation_evidence.errors %}<div class="text-danger">{{ form.sercat_separation_evidence.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ───────────── Documents ───────────── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">Documents</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="{{ form.resume.id_for_label }}" class="form-label">
+                                CV/Resume <span class="text-danger">*</span>
+                            </label>
+                            {{ form.resume }}
+                            <small class="text-muted d-block">Upload your resume (PDF, DOC, or DOCX format). Max 5 MB</small>
+                            {% if form.resume.errors %}
+                            <div class="alert alert-danger mt-2">{% for error in form.resume.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                            {% if form.resume.value %}
+                            <div class="alert alert-info mt-2">Current file: {{ form.resume.value.name }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.cover_letter.id_for_label }}" class="form-label">Cover Letter (Optional)</label>
+                            {{ form.cover_letter }}
+                            <small class="text-muted">Provide additional information about your application</small>
+                            {% if form.cover_letter.errors %}
+                            <div class="alert alert-danger mt-2">{% for error in form.cover_letter.errors %}{{ error }}{% endfor %}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ───────────── Statement ───────────── -->
+                <div class="card mb-4">
+                    <div class="card-header bg-warning"><h5 class="mb-0">Statement</h5></div>
+                    <div class="card-body">
+                        <p><strong>I declare that:</strong></p>
+                        <div class="form-check mb-2">
+                            {{ form.declaration_complete_correct }}
+                            <label class="form-check-label" for="{{ form.declaration_complete_correct.id_for_label }}">
+                                {{ form.declaration_complete_correct.label }}
+                            </label>
+                            {% if form.declaration_complete_correct.errors %}<div class="text-danger">{{ form.declaration_complete_correct.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="form-check mb-2">
+                            {{ form.declaration_no_other_applications }}
+                            <label class="form-check-label" for="{{ form.declaration_no_other_applications.id_for_label }}">
+                                {{ form.declaration_no_other_applications.label }}
+                            </label>
+                            {% if form.declaration_no_other_applications.errors %}<div class="text-danger">{{ form.declaration_no_other_applications.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <p class="mt-3"><strong>I understand that:</strong></p>
+                        <div class="form-check mb-2">
+                            {{ form.understand_false_info }}
+                            <label class="form-check-label" for="{{ form.understand_false_info.id_for_label }}">
+                                {{ form.understand_false_info.label }}
+                            </label>
+                            {% if form.understand_false_info.errors %}<div class="text-danger">{{ form.understand_false_info.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="form-check mb-2">
+                            {{ form.understand_additional_enquiries }}
+                            <label class="form-check-label" for="{{ form.understand_additional_enquiries.id_for_label }}">
+                                {{ form.understand_additional_enquiries.label }}
+                            </label>
+                            {% if form.understand_additional_enquiries.errors %}<div class="text-danger">{{ form.understand_additional_enquiries.errors.0 }}</div>{% endif %}
+                        </div>
+
+                        <div class="form-check mb-2" id="waiverCheck" style="display:none;">
+                            {{ form.understand_waiver_approval }}
+                            <label class="form-check-label" for="{{ form.understand_waiver_approval.id_for_label }}">
+                                {{ form.understand_waiver_approval.label }}
+                            </label>
+                            {% if form.understand_waiver_approval.errors %}<div class="text-danger">{{ form.understand_waiver_approval.errors.0 }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ───────── Electronic Signature ───────── -->
+                <div class="card mb-4">
+                    <div class="card-header"><h5 class="mb-0">Electronic Signature</h5></div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.electronic_signature.id_for_label }}" class="form-label">
+                                    Signature (Type your full name) <span class="text-danger">*</span>
+                                </label>
+                                {{ form.electronic_signature }}
+                                {% if form.electronic_signature.errors %}<div class="text-danger">{{ form.electronic_signature.errors.0 }}</div>{% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.signature_date.id_for_label }}" class="form-label">
+                                    Date <span class="text-danger">*</span>
+                                </label>
+                                {{ form.signature_date }}
+                                {% if form.signature_date.errors %}<div class="text-danger">{{ form.signature_date.errors.0 }}</div>{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ─────────── Form Actions ─────────── -->
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+                    <button type="submit" name="submit_application" class="btn btn-primary btn-lg">Submit Application</button>
+                    <a href="{% url 'job_detail' job.id %}" class="btn btn-secondary btn-lg">Cancel</a>
                 </div>
             </form>
         </div>
+
+        <!-- ───────────────── RIGHT COLUMN ───────────────── -->
+        <div class="col-lg-4 col-md-12">
+            <!-- Toggle (mobile) -->
+            <div class="d-lg-none mb-3">
+                <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="collapse" data-bs-target="#messagesPanel">
+                    <i class="bi bi-chat-dots"></i> Toggle Messages
+                </button>
+            </div>
+
+            <!-- Messages Panel -->
+            <div class="collapse d-lg-block" id="messagesPanel">
+                <div class="card sticky-lg-top" style="top:20px;">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="bi bi-chat-dots"></i> Messages</h5>
+                        <button type="button" class="btn-close btn-close-white d-lg-none" data-bs-toggle="collapse" data-bs-target="#messagesPanel"></button>
+                    </div>
+                    <div class="card-body" id="messagesContainer" style="max-height:60vh;overflow-y:auto;">
+                        {% if job_messages %}
+                            {% for msg in job_messages %}
+                            <div class="message {% if msg.sender == request.user %}message-sent{% else %}message-received{% endif %} mb-3">
+                                <div class="message-header">
+                                    <strong>{{ msg.sender.get_full_name|default:msg.sender.email }}</strong>
+                                    <small class="text-muted">{{ msg.timestamp|date:"M d, Y H:i" }}</small>
+                                </div>
+                                <div class="message-body">{{ msg.content|linebreaks }}</div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-muted text-center">No messages yet. Send a message to the employer if you have any questions.</p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer">
+                        <form method="post" id="messageForm">
+                            {% csrf_token %}
+                            <div class="mb-2">
+                                <textarea name="message_content" class="form-control" rows="3" placeholder="Type your message here…" required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm w-100">
+                                <i class="bi bi-send"></i> Send Message
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ───────────── Notes ───────────── -->
+<div class="container mb-4">
+    <div class="alert alert-info">
+        <h6>Notes:</h6>
+        <ol class="mb-0">
+            <li>You’ll receive a confirmation email when the form is complete.</li>
+            <li>Fields marked with <span class="text-danger">*</span> are required.</li>
+            <li>Please use third-person writing throughout.</li>
+            <li>The messaging panel lets you contact the employer directly.</li>
+        </ol>
     </div>
 </div>
 {% endblock %}
 
+{% block extra_css %}
+<style>
+    .message{
+        padding:10px 15px;border-radius:10px;word-wrap:break-word
+    }
+    .message-sent{
+        background:#d6ffcb;margin-left:20%
+    }
+    .message-received{
+        background:#ffffff;margin-right:20%
+    }
+    .message-header{margin-bottom:5px;font-size:.85rem}
+    .message-body{font-size:.95rem}
+    @media(max-width:991.98px){
+        .sticky-lg-top{position:relative!important}
+        #messagesPanel{position:fixed;bottom:0;left:0;right:0;z-index:1050;max-height:60vh}
+        #messagesPanel .card{border-radius:0;border:none;box-shadow:0 -2px 10px rgba(0,0,0,.1)}
+    }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script>
-    // Apply Bootstrap classes to form fields
-    document.addEventListener('DOMContentLoaded', function() {
-        const formControls = document.querySelectorAll('input:not([type="file"]), select, textarea');
-        formControls.forEach(element => {
-            if (!element.classList.contains('form-control')) {
-                element.classList.add('form-control');
-            }
-        });
-        
-        const fileInputs = document.querySelectorAll('input[type="file"]');
-        fileInputs.forEach(element => {
-            if (!element.classList.contains('form-control')) {
-                element.classList.add('form-control');
-            }
-        });
+document.addEventListener('DOMContentLoaded',function(){
+    const apsDetails=document.getElementById('apsDetails');
+    const sercatDetails=document.getElementById('sercatDetails');
+    const waiverCheck=document.getElementById('waiverCheck');
+
+    function toggle(section,radios){
+        const yes=[...radios].some(r=>r.checked && r.value==='True');
+        section.style.display=yes?'block':'none';
+    }
+    function checkWaiver(){
+        const needs=[...document.querySelectorAll('input[name="aps_within_12_months"],input[name="sercat_within_12_months"],input[name="currently_aps"],input[name="currently_sercat"]')]
+                     .some(r=>r.checked && r.value==='True');
+        waiverCheck.style.display=needs?'block':'none';
+    }
+
+    const apsRadios=document.querySelectorAll('input[name="aps_within_12_months"]');
+    const sercatRadios=document.querySelectorAll('input[name="sercat_within_12_months"]');
+    [...apsRadios,...sercatRadios,...document.querySelectorAll('input[name="currently_aps"],input[name="currently_sercat"]')].forEach(r=>{
+        r.addEventListener('change',()=>{toggle(apsDetails,apsRadios);toggle(sercatDetails,sercatRadios);checkWaiver();});
     });
+    toggle(apsDetails,apsRadios);toggle(sercatDetails,sercatRadios);checkWaiver();
+
+    const messagesContainer=document.getElementById('messagesContainer');
+    messagesContainer.scrollTop=messagesContainer.scrollHeight;
+
+    const messageForm=document.getElementById('messageForm');
+    messageForm.addEventListener('submit',function(e){
+        e.preventDefault();
+        const fd=new FormData(messageForm);
+        fd.append('send_message','1');   
+        fetch(window.location.href,{method:'POST',body:fd,headers:{'X-Requested-With':'XMLHttpRequest'}})
+        .then(r=>r.json()).then(d=>{
+            if(d.success){
+                messagesContainer.insertAdjacentHTML('beforeend',
+                    `<div class="message message-sent mb-3">
+                        <div class="message-header"><strong>${d.sender_name}</strong>
+                            <small class="text-muted">${d.timestamp}</small>
+                        </div>
+                        <div class="message-body">${d.content}</div>
+                    </div>`);
+                messageForm.reset();
+                messagesContainer.scrollTop=messagesContainer.scrollHeight;
+            }else{alert('Error: '+(d.error||'Unknown'));}})
+        .catch(()=>alert('Error sending message. Please try again.'));
+    });
+});
 </script>
 {% endblock %}

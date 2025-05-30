@@ -158,7 +158,7 @@ class Advertisement(models.Model):
 
 class JobApplication(models.Model):
     """
-    Job application model
+    Job application model with integrated declaration form
     """
     APPLICATION_STATUS = [
         ('Pending', 'Pending'),
@@ -168,23 +168,214 @@ class JobApplication(models.Model):
         ('Rejected', 'Rejected'),
     ]
 
+    # Basic Information
     job = models.ForeignKey(Job, related_name="applications", on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser, related_name="applications", on_delete=models.CASCADE)
-    full_name = models.CharField(max_length=200)  
-    current_clearance = models.CharField(max_length=200, verbose_name="Current Level of Defence Clearance")  
-    clearance_expiry_date = models.DateField(null=True, blank=True, verbose_name="Defence Clearance Expiry Date")  
-    clearance_number = models.CharField(max_length=200, verbose_name="AGVSA CS Number", blank=True)  
-    location_of_residence = models.CharField(max_length=200) 
-    date_of_birth = models.DateField(null=True, blank=True)  
-    earliest_start_date = models.DateField(null=True, blank=True, verbose_name="Earliest Start Date")  
-    proposed_rate = models.CharField(max_length=200, blank=True, verbose_name="Proposed Contract Rate")  
-    proposed_salary = models.CharField(max_length=200, blank=True, verbose_name="Proposed Annual Salary")  
-    planned_leave = models.CharField(max_length=200, blank=True, verbose_name="Any Planned Leave") 
-    available_for_interview = models.CharField(max_length=200, default='Yes') 
-    cover_letter = models.TextField(blank=True)
-    resume = models.FileField(upload_to='resumes/', blank=True, null=True)
+    
+    # Applicant Details
+    full_name = models.CharField(max_length=200, verbose_name="Full Name (First, Middle, Last)")
+    current_clearance = models.CharField(max_length=200, verbose_name="Current Level of Defence Clearance")
+    clearance_expiry_date = models.DateField(null=True, blank=True, verbose_name="Defence Clearance Expiry Date")
+    agsva_cs_number = models.CharField(max_length=200, blank=True, verbose_name="AGSVA CS Number")
+    date_of_birth = models.DateField(null=True, blank=True, verbose_name="Date of Birth")
+    location_of_residence = models.CharField(max_length=200, verbose_name="Location of residence (city, state)")
+    earliest_start_date = models.DateField(verbose_name="Earliest date you can start work")
+    proposed_contract_rate = models.CharField(max_length=200, blank=True, verbose_name="Proposed contract rate (per day, ex GST)")
+    abn = models.CharField(max_length=200, blank=True, verbose_name="ABN")
+    proposed_annual_salary = models.CharField(max_length=200, blank=True, verbose_name="Proposed annual salary (including Super)")
+    planned_leave = models.TextField(blank=True, verbose_name="Any planned leave?")
+    available_for_interview = models.CharField(max_length=200, verbose_name="Available for interview? Phone/In-person?")
+    
+    # Experience Questions
+    industry_engagement_experience = models.TextField(
+        verbose_name="Describe your level of knowledge and experience in relation to Industry Engagement Management within Defence, Government or similar industry"
+    )
+    project_expectations = models.TextField(
+        verbose_name="Describe your expectations on joining the project"
+    )
+    qualifications_certifications = models.TextField(
+        verbose_name="Provide details of your qualifications and industry certifications that are relevant to the role"
+    )
+    
+    # References
+    referee1_name = models.CharField(max_length=200, verbose_name="Referee 1 Name and Title")
+    referee1_email = models.EmailField(verbose_name="Referee 1 Email")
+    referee1_phone = models.CharField(max_length=20, verbose_name="Referee 1 Telephone")
+    referee1_description = models.TextField(verbose_name="Referee 1 - Brief description of services performed")
+    
+    referee2_name = models.CharField(max_length=200, verbose_name="Referee 2 Name and Title")
+    referee2_email = models.EmailField(verbose_name="Referee 2 Email")
+    referee2_phone = models.CharField(max_length=20, verbose_name="Referee 2 Telephone")
+    referee2_description = models.TextField(verbose_name="Referee 2 - Brief description of services performed")
+    
+    # Additional Information
+    additional_materials = models.TextField(
+        blank=True,
+        verbose_name="Additional materials to include with application",
+        help_text="List any referee reports, letters of merit/appreciation, awards etc."
+    )
+    unique_skills = models.TextField(
+        blank=True,
+        verbose_name="Unique skills or experience",
+        help_text="Provide details on any unique skills or experience not identified in prior questions"
+    )
+    
+    # Conflict of Interest - Role
+    worked_on_project = models.BooleanField(
+        default=False,
+        verbose_name="Have you been working on this Project in any capacity within the last 6 months?"
+    )
+    worked_on_requirement = models.BooleanField(
+        default=False,
+        verbose_name="Have you been working on this requirement in any capacity within the last 12 months?"
+    )
+    involved_in_selection = models.BooleanField(
+        default=False,
+        verbose_name="Have you been involved in the selection of the associated Service Providers in any capacity?"
+    )
+    potential_conflict = models.BooleanField(
+        default=False,
+        verbose_name="Is there a potential for a real or perceived conflict of interest or a probity objection if you perform or contribute to the Project?"
+    )
+    
+    # APS Defence Conflict of Interest
+    currently_aps = models.BooleanField(
+        default=False,
+        verbose_name="Are you currently employed in Defence as a Public Servant?"
+    )
+    aps_within_12_months = models.BooleanField(
+        default=False,
+        verbose_name="Have you been employed in Defence as a Public Servant within the last 12 months?"
+    )
+    
+    # APS Employment Details (if applicable)
+    aps_engagement_details = models.TextField(
+        blank=True,
+        verbose_name="Details of your most recent area of engagement"
+    )
+    aps_employment_from = models.DateField(
+        null=True, blank=True,
+        verbose_name="APS Employment Period - From"
+    )
+    aps_employment_to = models.DateField(
+        null=True, blank=True,
+        verbose_name="APS Employment Period - To"
+    )
+    aps_resignation_evidence = models.FileField(
+        upload_to='aps_resignations/', 
+        blank=True, null=True,
+        verbose_name="Evidence of Resignation from the APS"
+    )
+    
+    # SERCAT Employment
+    currently_sercat = models.BooleanField(
+        default=False,
+        verbose_name="Are you currently employed in Defence as SERCAT 1, 6 or 7?"
+    )
+    sercat_within_12_months = models.BooleanField(
+        default=False,
+        verbose_name="Have you been employed (excluding SERCAT 2-5) in the ADF within the last 12 months?"
+    )
+    
+    # SERCAT Employment Details (if applicable)
+    sercat_engagement_details = models.TextField(
+        blank=True,
+        verbose_name="Details of your most recent engagement"
+    )
+    sercat_employment_from = models.DateField(
+        null=True, blank=True,
+        verbose_name="SERCAT Employment Period - From"
+    )
+    sercat_employment_to = models.DateField(
+        null=True, blank=True,
+        verbose_name="SERCAT Employment Period - To"
+    )
+    sercat_separation_evidence = models.FileField(
+        upload_to='sercat_separations/', 
+        blank=True, null=True,
+        verbose_name="Evidence of Separation from ADF"
+    )
+    
+    # Application Confirmation
+    written_third_person = models.BooleanField(
+        default=False,
+        verbose_name="Application is written in 3rd person"
+    )
+    cv_no_gaps = models.BooleanField(
+        default=False,
+        verbose_name="CV has no gaps"
+    )
+    cv_month_year_listed = models.BooleanField(
+        default=False,
+        verbose_name="Month and year for each past role are listed in the CV"
+    )
+    
+    # Declaration
+    declaration_complete_correct = models.BooleanField(
+        default=False,
+        verbose_name="I declare that the information I have provided on this form is complete and correct"
+    )
+    declaration_no_other_applications = models.BooleanField(
+        default=False,
+        verbose_name="I declare that no applications for this role have occurred through other agencies"
+    )
+    understand_false_info = models.BooleanField(
+        default=False,
+        verbose_name="I understand that giving false or misleading information is considered grounds for dismissal"
+    )
+    understand_additional_enquiries = models.BooleanField(
+        default=False,
+        verbose_name="I understand that C4 may make additional enquiries to verify the information provided"
+    )
+    understand_waiver_approval = models.BooleanField(
+        default=False,
+        verbose_name="I understand that requests for waiver take 10 business days to be approved"
+    )
+    
+    # Files
+    resume = models.FileField(upload_to='resumes/', verbose_name="CV/Resume")
+    cover_letter = models.TextField(blank=True, verbose_name="Cover Letter")
+    
+    # Metadata
     submission_date = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=50, choices=APPLICATION_STATUS, default="Pending")
+    
+    # Signature
+    electronic_signature = models.CharField(
+        max_length=200,
+        verbose_name="Electronic Signature (Type your full name)"
+    )
+    signature_date = models.DateField(
+        default=timezone.now,
+        verbose_name="Signature Date"
+    )
 
     def __str__(self):
         return f"Application for {self.job.title} by {self.full_name}"
+    
+    def clean(self):
+        # Validate conflict of interest responses
+        if self.currently_aps and not self.aps_engagement_details:
+            raise ValidationError('Please provide details of your APS engagement')
+            
+        if self.aps_within_12_months and not all([self.aps_employment_from, self.aps_employment_to]):
+            raise ValidationError('Please provide APS employment period details')
+            
+        if self.currently_sercat and not self.sercat_engagement_details:
+            raise ValidationError('Please provide details of your SERCAT engagement')
+            
+        if self.sercat_within_12_months and not all([self.sercat_employment_from, self.sercat_employment_to]):
+            raise ValidationError('Please provide SERCAT employment period details')
+            
+        # Validate all declaration checkboxes are checked
+        if not all([
+            self.declaration_complete_correct,
+            self.declaration_no_other_applications,
+            self.understand_false_info,
+            self.understand_additional_enquiries
+        ]):
+            raise ValidationError('All declaration statements must be acknowledged')
+            
+        # Validate application confirmation
+        if not all([self.written_third_person, self.cv_no_gaps, self.cv_month_year_listed]):
+            raise ValidationError('Please confirm all application requirements are met')

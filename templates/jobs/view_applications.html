@@ -4,65 +4,234 @@
 
 {% block content %}
 <div class="container">
-    <h1 class="mb-4">Applications for {{ job.title }}</h1>
-    
-    <div class="mb-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Applications for {{ job.title }}</h1>
         <a href="{% url 'job_detail' job.id %}" class="btn btn-secondary">Back to Job</a>
     </div>
     
-    {% if applications %}
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5>Applications ({{ applications.count }})</h5>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th>Applicant</th>
-                                <th>Submission Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for application in applications %}
-                            <tr>
-                                <td>{{ application.full_name }}</td>
-                                <td>{{ application.submission_date|date }}</td>
-                                <td>
-                                    <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% else %}info{% endif %}">
-                                        {{ application.status }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <a href="{% url 'application_detail' application.id %}" class="btn btn-sm btn-primary">View</a>
-                                    <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                                            Change Status
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Pending' %}">Pending</a></li>
-                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Reviewing' %}">Reviewing</a></li>
-                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Interviewed' %}">Interviewed</a></li>
-                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Accepted' %}">Accepted</a></li>
-                                            <li><a class="dropdown-item" href="{% url 'update_application_status' application.id 'Rejected' %}">Rejected</a></li>
-                                        </ul>
-                                    </div>
-                                    <a href="{% url 'send_message_application' application.user.id application.id %}" class="btn btn-sm btn-info">Message</a>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4>{{ stats.total }}</h4>
+                    <p class="mb-0">Total</p>
                 </div>
             </div>
         </div>
-    {% else %}
-        <div class="alert alert-info">
-            No applications have been submitted for this job yet.
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-warning">{{ stats.pending }}</h4>
+                    <p class="mb-0">Pending</p>
+                </div>
+            </div>
         </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-info">{{ stats.reviewing }}</h4>
+                    <p class="mb-0">Reviewing</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-primary">{{ stats.interviewed }}</h4>
+                    <p class="mb-0">Interviewed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-success">{{ stats.accepted }}</h4>
+                    <p class="mb-0">Accepted</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h4 class="text-danger">{{ stats.rejected }}</h4>
+                    <p class="mb-0">Rejected</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="status" class="form-label">Filter by Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">All Statuses</option>
+                        {% for status_code, status_name in status_choices %}
+                        <option value="{{ status_code }}" {% if status_code == current_status %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="search" class="form-label">Search by Name or Email</label>
+                    <input type="text" name="search" id="search" class="form-control" 
+                           value="{{ search_query }}" placeholder="Search applications...">
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Applications Table -->
+    {% if page_obj.object_list %}
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Applicant Name</th>
+                            <th>Email</th>
+                            <th>Clearance</th>
+                            <th>Location</th>
+                            <th>Submitted</th>
+                            <th>Status</th>
+                            <th>Conflicts</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for application in page_obj.object_list %}
+                        <tr>
+                            <td>
+                                <strong>{{ application.full_name }}</strong>
+                            </td>
+                            <td>{{ application.user.email }}</td>
+                            <td>{{ application.current_clearance }}</td>
+                            <td>{{ application.location_of_residence }}</td>
+                            <td>{{ application.submission_date|date:"d/m/Y" }}</td>
+                            <td>
+                                <span class="badge bg-{% if application.status == 'Pending' %}warning{% elif application.status == 'Accepted' %}success{% elif application.status == 'Rejected' %}danger{% elif application.status == 'Reviewing' %}info{% else %}primary{% endif %}">
+                                    {{ application.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if application.currently_aps or application.aps_within_12_months or application.currently_sercat or application.sercat_within_12_months %}
+                                    <span class="badge bg-warning" title="Requires waiver">⚠️ Waiver</span>
+                                {% endif %}
+                                {% if application.potential_conflict %}
+                                    <span class="badge bg-danger" title="Potential conflict">⚠️ Conflict</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'application_detail' application.id %}" 
+                                       class="btn btn-sm btn-outline-primary">View</a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                        <span class="visually-hidden">Toggle Dropdown</span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <h6 class="dropdown-header">Update Status</h6>
+                                        </li>
+                                        {% for status_code, status_name in status_choices %}
+                                        <li>
+                                            <form method="post" action="{% url 'update_application_status' application.id %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="status" value="{{ status_code }}">
+                                                <button type="submit" class="dropdown-item">
+                                                    {{ status_name }}
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endfor %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'download_application' application.id %}">
+                                                <i class="bi bi-download"></i> Export Application
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+            <nav aria-label="Application pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_status %}&status={{ current_status }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        No applications found matching your criteria.
+    </div>
     {% endif %}
+    
+    <!-- Export Options -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0">Export Options</h5>
+        </div>
+        <div class="card-body">
+            <p>Export all applications for this job:</p>
+            <button class="btn btn-outline-success" onclick="alert('CSV export feature coming soon')">
+                <i class="bi bi-file-earmark-excel"></i> Export to CSV
+            </button>
+            <button class="btn btn-outline-danger ms-2" onclick="alert('PDF export feature coming soon')">
+                <i class="bi bi-file-earmark-pdf"></i> Export to PDF
+            </button>
+        </div>
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form when status filter changes
+    document.getElementById('status').addEventListener('change', function() {
+        this.form.submit();
+    });
+});
+</script>
 {% endblock %}

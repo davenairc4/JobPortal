@@ -4,38 +4,173 @@
 
 {% block content %}
 <div class="container">
-    <h1 class="my-4">Job Listings</h1>
+    <h1 class="mb-4">Available Jobs</h1>
     
-    {% if jobs %}
+    <!-- Search and Filter Form -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="q" class="form-label">Search Jobs</label>
+                    <input type="text" name="q" id="q" class="form-control" 
+                           value="{{ query }}" placeholder="Search by title, description, or skills...">
+                </div>
+                <div class="col-md-2">
+                    <label for="location" class="form-label">Location</label>
+                    <select name="location" id="location" class="form-select">
+                        <option value="">All Locations</option>
+                        {% for loc_code, loc_name in locations %}
+                        <option value="{{ loc_code }}" {% if location == loc_code %}selected{% endif %}>
+                            {{ loc_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="type" class="form-label">Job Type</label>
+                    <select name="type" id="type" class="form-select">
+                        <option value="">All Types</option>
+                        {% for type_code, type_name in job_types %}
+                        <option value="{{ type_code }}" {% if job_type == type_code %}selected{% endif %}>
+                            {{ type_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="clearance" class="form-label">Clearance</label>
+                    <select name="clearance" id="clearance" class="form-select">
+                        <option value="">All Levels</option>
+                        {% for clear_code, clear_name in clearance_levels %}
+                        <option value="{{ clear_code }}" {% if clearance == clear_code %}selected{% endif %}>
+                            {{ clear_name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </form>
+            {% if query or location or job_type or clearance %}
+            <div class="mt-2">
+                <a href="{% url 'job_list' %}" class="btn btn-sm btn-secondary">Clear Filters</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Jobs List -->
+    {% if page_obj.object_list %}
         <div class="row">
-            {% for job in jobs %}
+            {% for job in page_obj.object_list %}
                 <div class="col-md-6 mb-4">
-                    <div class="card h-100">
+                    <div class="card h-100 shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">{{ job.title }}</h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ job.location }} - {{ job.job_type }}</h6>
-                            <p class="card-text">{{ job.short_description }}</p>
-                            <a href="{% url 'job_detail' job.id %}" class="btn btn-primary">View Details</a>
-                        </div>
-                        <div class="card-footer text-muted">
-                            {% if job.closing_date %}
-                                Apply by: {{ job.closing_date }}
+                            <h5 class="card-title">
+                                <a href="{% url 'job_detail' job.id %}" class="text-decoration-none">
+                                    {{ job.title }}
+                                </a>
+                            </h5>
+                            
+                            <p class="card-text text-muted">{{ job.short_description }}</p>
+                            
+                            <div class="mb-3">
+                                <span class="badge bg-primary">{{ job.job_type }}</span>
+                                <span class="badge bg-secondary">{{ job.location }}</span>
+                                {% if job.clearance != "None" %}
+                                <span class="badge bg-info">{{ job.clearance }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <ul class="list-unstyled small">
+                                <li><i class="bi bi-cash"></i> <strong>Salary:</strong> {{ job.salary }}</li>
+                                {% if job.commencement_date %}
+                                <li><i class="bi bi-calendar-check"></i> <strong>Start:</strong> {{ job.commencement_date|date:"d M Y" }}</li>
+                                {% endif %}
+                                {% if job.closing_date %}
+                                <li><i class="bi bi-clock"></i> <strong>Closes:</strong> {{ job.closing_date|date:"d M Y" }}</li>
+                                {% endif %}
+                            </ul>
+                            
+                            {% if job.rfqts %}
+                            <p class="small text-muted mb-2">
+                                <i class="bi bi-file-text"></i> RFQTS: {{ job.rfqts.rfqts_no }}
+                            </p>
                             {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Posted {{ job.submission_date|timesince }} ago
+                                </small>
+                                <a href="{% url 'job_detail' job.id %}" class="btn btn-sm btn-outline-primary">
+                                    View Details
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>
             {% endfor %}
         </div>
+        
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Jobs pagination">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if location %}&location={{ location }}{% endif %}{% if job_type %}&type={{ job_type }}{% endif %}{% if clearance %}&clearance={{ clearance }}{% endif %}">
+                        Previous
+                    </a>
+                </li>
+                {% endif %}
+                
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if location %}&location={{ location }}{% endif %}{% if job_type %}&type={{ job_type }}{% endif %}{% if clearance %}&clearance={{ clearance }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if location %}&location={{ location }}{% endif %}{% if job_type %}&type={{ job_type }}{% endif %}{% if clearance %}&clearance={{ clearance }}{% endif %}">
+                        Next
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     {% else %}
-        <div class="alert alert-info">
-            No jobs available at this time.
+        <div class="alert alert-info" role="alert">
+            <h4 class="alert-heading">No Jobs Found</h4>
+            {% if query or location or job_type or clearance %}
+            <p>No jobs match your search criteria. Try adjusting your filters.</p>
+            <hr>
+            <a href="{% url 'job_list' %}" class="btn btn-primary">View All Jobs</a>
+            {% else %}
+            <p>There are currently no active job listings.</p>
+            {% endif %}
         </div>
     {% endif %}
     
-    {% if user.is_authenticated and user.is_employer %}
-        <div class="mt-4">
-            <a href="{% url 'create_job' %}" class="btn btn-success">Post a New Job</a>
-        </div>
-    {% endif %}
+    <!-- Summary Stats -->
+    <div class="mt-4">
+        <p class="text-muted text-center">
+            Showing {% if page_obj.object_list %}{{ page_obj.start_index }} - {{ page_obj.end_index }} of {% endif %}
+            {{ page_obj.paginator.count }} job{{ page_obj.paginator.count|pluralize }}
+        </p>
+    </div>
 </div>
 {% endblock %}
