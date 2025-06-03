@@ -16,11 +16,11 @@ def home(request):
         status='Published',
         is_featured=True,
         expire_date__gte=timezone.now()
-    )[:5]
+    ).select_related('job')[:5]
     recent_jobs = Job.objects.filter(
         is_active=True,
         closing_date__gte=timezone.now().date()
-    )[:10]
+    ).select_related('rfqts', 'created_by')[:10]
     return render(request, 'jobs/home.html', {
         'featured_ads': featured_ads,
         'recent_jobs': recent_jobs
@@ -28,7 +28,7 @@ def home(request):
 
 
 def job_list(request):
-    jobs = Job.objects.filter(is_active=True).select_related('rfqts').order_by('-submission_date')
+    jobs = Job.objects.filter(is_active=True).select_related('rfqts', 'created_by').order_by('-submission_date')
     query = request.GET.get('q')
     if query:
         jobs = jobs.filter(
@@ -61,7 +61,7 @@ def job_list(request):
 
 
 def job_detail(request, job_id):
-    job = get_object_or_404(Job, id=job_id, is_active=True)
+    job = get_object_or_404(Job.objects.select_related('rfqts', 'created_by').prefetch_related('positions'), id=job_id, is_active=True)
     if hasattr(job, 'advertisement') and job.advertisement.status == 'Published':
         job.advertisement.view_count += 1
         job.advertisement.save()
@@ -69,14 +69,14 @@ def job_detail(request, job_id):
     user_application = None
     if request.user.is_authenticated:
         try:
-            user_application = JobApplication.objects.get(job=job, user=request.user)
+            user_application = JobApplication.objects.select_related('user', 'job').get(job=job, user=request.user)
             has_applied = True
         except JobApplication.DoesNotExist:
             pass
     related_jobs = Job.objects.filter(
         is_active=True,
         location=job.location
-    ).exclude(id=job.id)[:5]
+    ).exclude(id=job.id).select_related('rfqts', 'created_by')[:5]
     return render(request, 'jobs/job_detail.html', {
         'job': job,
         'has_applied': has_applied,
@@ -104,7 +104,7 @@ def create_rfqts(request):
 def rfqts_list(request):
     if not request.user.is_employer and not request.user.is_staff:
         return HttpResponseForbidden("You don't have permission to view RFQTS.")
-    rfqts_list = RFQTS.objects.all().order_by('-created_at')
+    rfqts_list = RFQTS.objects.select_related().order_by('-created_at')
     query = request.GET.get('q')
     if query:
         rfqts_list = rfqts_list.filter(
@@ -126,7 +126,7 @@ def rfqts_detail(request, rfqts_id):
     if not request.user.is_employer and not request.user.is_staff:
         return HttpResponseForbidden("You don't have permission to view RFQTS.")
     rfqts = get_object_or_404(RFQTS, id=rfqts_id)
-    jobs = rfqts.jobs.all()
+    jobs = rfqts.jobs.select_related('created_by', 'rfqts').prefetch_related('positions')
     return render(request, 'jobs/rfqts_detail.html', {
         'rfqts': rfqts,
         'jobs': jobs,
@@ -173,7 +173,7 @@ def create_job(request, rfqts_id=None):
 
 @login_required
 def edit_job(request, job_id):
-    job = get_object_or_404(Job, id=job_id)
+    job = get_object_or_404(Job.objects.select_related('created_by', 'rfqts'), id=job_id)
     if job.created_by != request.user and not request.user.is_staff:
         return HttpResponseForbidden("You don't have permission to edit this job.")
     if request.method == 'POST':
@@ -192,7 +192,7 @@ def edit_job(request, job_id):
 
 @login_required
 def manage_positions(request, job_id):
-    job = get_object_or_404(Job, id=job_id)
+    job = get_object_or_404(Job.objects.select_related('created_by', 'rfqts'), id=job_id)
     if job.created_by != request.user and not request.user.is_staff:
         return HttpResponseForbidden("You don't have permission to manage positions for this job.")
     if request.method == 'POST':
@@ -205,7 +205,7 @@ def manage_positions(request, job_id):
             return redirect('manage_positions', job_id=job.id)
     else:
         form = PositionForm()
-    positions = Position.objects.filter(job=job)
+    positions = Position.objects.filter(job=job).select_related('job')
     return render(request, 'jobs/manage_positions.html', {
         'form': form,
         'job': job,
@@ -215,7 +215,7 @@ def manage_positions(request, job_id):
 
 @login_required
 def create_advertisement(request, job_id):
-    job = get_object_or_404(Job, id=job_id)
+    job = get_object_or_404(Job.objects.select_related('created_by', 'rfqts'), id=job_id)
     if job.created_by != request.user and not request.user.is_staff:
         return HttpResponseForbidden("You don't have permission to create an advertisement for this job.")
     if hasattr(job, 'advertisement'):
@@ -238,7 +238,7 @@ def create_advertisement(request, job_id):
 
 @login_required
 def edit_advertisement(request, ad_id):
-    ad = get_object_or_404(Advertisement, id=ad_id)
+    ad = get_object_or_404(Advertisement.objects.select_related('job__created_by', 'job__rfqts'), id=ad_id)
     if ad.job.created_by != request.user and not request.user.is_staff:
         return HttpResponseForbidden("You don't have permission to edit this advertisement.")
     if request.method == 'POST':
@@ -261,7 +261,7 @@ def apply_for_job(request, job_id):
     if not request.user.is_job_seeker:
         return HttpResponseForbidden("Only job seekers can apply for jobs.")
     
-    job = get_object_or_404(Job, id=job_id, is_active=True)
+    job = get_object_or_404(Job.objects.select_related('created_by', 'rfqts'), id=job_id, is_active=True)
     
     # Check if closing date has passed
     if job.closing_date and job.closing_date < timezone.now().date():
@@ -281,7 +281,7 @@ def apply_for_job(request, job_id):
         job_messages = Message.objects.filter(
             Q(sender=request.user, recipient=job.created_by) |
             Q(sender=job.created_by, recipient=request.user)
-        ).order_by('timestamp')
+        ).select_related('sender', 'recipient').order_by('timestamp')
         
         # If Message model has a job field, filter by it
         if hasattr(Message, 'job'):
@@ -383,7 +383,7 @@ def my_applications(request):
     # all applications for counters
     all_apps = JobApplication.objects.filter(
         user=request.user
-    ).select_related('job')
+    ).select_related('job__created_by', 'job__rfqts')
 
     # status filter for the list itself
     status = request.GET.get('status')
@@ -407,12 +407,12 @@ def my_applications(request):
 
 @login_required
 def view_applications(request, job_id):
-    job = get_object_or_404(Job, id=job_id)
+    job = get_object_or_404(Job.objects.select_related('created_by', 'rfqts'), id=job_id)
     
     if job.created_by != request.user and not request.user.is_staff:
         return HttpResponseForbidden("You don't have permission to view applications for this job.")
     
-    applications = JobApplication.objects.filter(job=job).select_related('user')
+    applications = JobApplication.objects.filter(job=job).select_related('user', 'job')
     
     # Filter by status
     status = request.GET.get('status')
@@ -455,7 +455,7 @@ def view_applications(request, job_id):
 
 @login_required
 def application_detail(request, application_id):
-    application = get_object_or_404(JobApplication, id=application_id)
+    application = get_object_or_404(JobApplication.objects.select_related('user', 'job__created_by', 'job__rfqts'), id=application_id)
     
     # Check permissions
     is_applicant = application.user == request.user
@@ -488,7 +488,7 @@ def update_application_status(request, application_id):
     if request.method != 'POST':
         return JsonResponse({'error': 'Method not allowed'}, status=405)
         
-    application = get_object_or_404(JobApplication, id=application_id)
+    application = get_object_or_404(JobApplication.objects.select_related('job__created_by'), id=application_id)
     
     # Check permissions
     if application.job.created_by != request.user and not request.user.is_staff:
@@ -517,7 +517,7 @@ def update_application_status(request, application_id):
 @login_required
 def download_application(request, application_id):
     """Export application as PDF or Word document"""
-    application = get_object_or_404(JobApplication, id=application_id)
+    application = get_object_or_404(JobApplication.objects.select_related('user', 'job__created_by'), id=application_id)
     
     # Check permissions
     if (application.job.created_by != request.user and 
@@ -538,7 +538,7 @@ def employer_dashboard(request):
         return HttpResponseForbidden("You don't have permission to access the employer dashboard.")
     
     # Get employer's jobs
-    jobs = Job.objects.filter(created_by=request.user).order_by('-submission_date')
+    jobs = Job.objects.filter(created_by=request.user).select_related('rfqts').prefetch_related('jobapplication_set').order_by('-submission_date')
     
     # Get recent applications
     recent_applications = JobApplication.objects.filter(

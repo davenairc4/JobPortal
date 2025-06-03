@@ -4,6 +4,9 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from users.models import CustomUser
 
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
 
 class RFQTS(models.Model):
     """
@@ -379,3 +382,664 @@ class JobApplication(models.Model):
         # Validate application confirmation
         if not all([self.written_third_person, self.cv_no_gaps, self.cv_month_year_listed]):
             raise ValidationError('Please confirm all application requirements are met')
+
+# ═════════════════════════════════════════════════════════════════════════════
+# QUOTATION MODELS - Structured according to DSS Deed Quotation Form
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+class Quotation(models.Model):
+    """
+    QUOTATION
+    Under Defence Support Services (DSS) Standing Offer Deed
+    The Service Provider submits this Quotation in accordance with the Deed and 
+    in response to the Commonwealth Request for Quotation and Tasking Statement.
+    """
+    
+    EMPLOYEE_COUNT_CHOICES = [
+        ('4_or_less', '4 or less'),
+        ('5_to_19', '5 to 19'),
+        ('20_to_99', '20 to 99'),
+        ('100_to_199', '100 to 199'),
+        ('200_or_more', '200 or more'),
+    ]
+
+    application = models.OneToOneField(
+        JobApplication,
+        on_delete=models.CASCADE,
+        related_name="quotation",
+        primary_key=True,
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # BASIC QUOTATION DETAILS
+    # ─────────────────────────────────────────────────────────────────────────
+    rfqts_no = models.CharField(
+        "RFQTS No.", 
+        max_length=100, 
+        blank=True,
+        help_text="Request for Quotation and Tasking Statement Number"
+    )
+    task_title = models.CharField(
+        "Task Title", 
+        max_length=255, 
+        blank=True
+    )
+    service_provider_name = models.CharField(
+        "Service Provider Name", 
+        max_length=255, 
+        blank=True
+    )
+    service_provider_abn = models.CharField(
+        "Service Provider ABN", 
+        max_length=50, 
+        blank=True
+    )
+    service_provider_employee_count = models.CharField(
+        "How many full time employees (or equivalent) does the Service Provider have?",
+        max_length=20,
+        choices=EMPLOYEE_COUNT_CHOICES,
+        blank=True
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # LOCATION
+    # ─────────────────────────────────────────────────────────────────────────
+    location = models.CharField(
+        "Location", 
+        max_length=255, 
+        blank=True,
+        help_text="Location where services will be provided"
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SPECIFIED PERSONNEL
+    # ─────────────────────────────────────────────────────────────────────────
+    complies_clause_2_4 = models.BooleanField(
+        "The Service Provider confirms that any Specified Personnel comply with Clause 2.4 of the DSS Deed",
+        default=True,
+        help_text="If no, having regard to clause 2.4.6, the Service Provider must submit a request for written approval not less than 10 working days prior to a response from the Deed Manager being required."
+    )
+    personnel_cv_attached = models.BooleanField(
+        "Specified Personnel CV(s) Attached (if applicable)",
+        default=False
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SUBCONTRACTORS TO BE USED IN PROVIDING THE SERVICES
+    # ─────────────────────────────────────────────────────────────────────────
+    subcontractor_cv_attached = models.BooleanField(
+        "Subcontractor Personnel CV(s) Attached (if applicable)",
+        default=False
+    )
+    subcontractor_employee_count = models.CharField(
+        "How many full time employees (or equivalent) does the Subcontractor have?",
+        max_length=20,
+        choices=EMPLOYEE_COUNT_CHOICES,
+        blank=True
+    )
+    subcontractors_indigenous_enterprise = models.BooleanField(
+        "Are any of the subcontractors an Indigenous enterprise for the purposes of the Commonwealth's Indigenous Procurement Policy?",
+        default=False
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SECURITY REQUIREMENTS
+    # ─────────────────────────────────────────────────────────────────────────
+    security_clearance_comments = models.TextField(
+        "Comments relating Security Clearance requirements",
+        blank=True,
+        help_text="Details about security clearance requirements for personnel"
+    )
+    security_guidance_comments = models.TextField(
+        "Comments relating Security Guidance",
+        blank=True,
+        help_text="Comments about security guidance compliance"
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # KEY RESULT AREAS
+    # ─────────────────────────────────────────────────────────────────────────
+    key_result_areas = models.TextField(
+        "Agreement with Commonwealth proposed Key Result Areas",
+        blank=True,
+        help_text="Confirmation of agreement with proposed KRAs"
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # CURRENCY OF INSURANCES DETAILED BELOW
+    # ─────────────────────────────────────────────────────────────────────────
+    workers_compensation = models.CharField(
+        "Workers Compensation",
+        max_length=100,
+        blank=True,
+        help_text="Yes/No - Current workers compensation insurance"
+    )
+    professional_indemnity = models.CharField(
+        "Professional Indemnity",
+        max_length=100,
+        blank=True,
+        help_text="Yes/No - Current professional indemnity insurance"
+    )
+    public_liability = models.CharField(
+        "Public Liability",
+        max_length=100,
+        blank=True,
+        help_text="Yes/No - Current public liability insurance"
+    )
+    other_insurance_details = models.TextField(
+        "Other Task Specific insurances required",
+        blank=True,
+        help_text="Details of any other specific insurance requirements"
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SERVICES
+    # ─────────────────────────────────────────────────────────────────────────
+    methodology = models.TextField(
+        "Methodology proposed to provide the Services",
+        blank=True,
+        help_text="Detailed methodology for service delivery"
+    )
+    plans_attached = models.TextField(
+        "Copies of the following plans are attached",
+        blank=True,
+        help_text="List any plans or documents attached"
+    )
+    gfm = models.TextField(
+        "GFM",
+        blank=True,
+        help_text="Government Furnished Materials - If Special Condition 2 applies, detail any changes to the GFM detailed in the GFM table provided in the RFQTS"
+    )
+    third_party_ip = models.TextField(
+        "Third Party and/or Background IP that is proposed to be used in the Contract",
+        blank=True,
+        help_text="Details of any third party or background intellectual property"
+    )
+    confidential_info = models.TextField(
+        "Information that the Service Provider claims is Confidential Information",
+        blank=True,
+        help_text="Information claimed as confidential"
+    )
+    conflict_of_interest = models.BooleanField(
+        "Confirmation that no Conflict of Interest exists, or is anticipated to arise in the course of the Contract in accordance with Clause 2.3 of the DSS Deed",
+        default=False
+    )
+    executed_confidentiality_deed = models.BooleanField(
+        "Confirmation that an Executed Deed of Confidentiality will be provided if required by the Commonwealth",
+        default=False
+    )
+    other_services_comments = models.TextField(
+        "Others",
+        blank=True,
+        help_text="Any other relevant information about services"
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # DELIVERY SCHEDULE AND PRICING DETAILS (GST Inclusive)
+    # ─────────────────────────────────────────────────────────────────────────
+    
+    # Time and Materials Totals
+    time_materials_sub_total = models.DecimalField(
+        "Sub-total (Time and Materials)",
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Sub-total for time and materials items"
+    )
+    time_materials_allowances = models.DecimalField(
+        "Allowances - Travel, Accommodation and Other Approved Expenses (Time and Materials)",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    time_materials_other_disbursements = models.DecimalField(
+        "Other proposed disbursements (Time and Materials)",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    time_materials_total = models.DecimalField(
+        "Time and Materials Total",
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    # Fixed Price Totals
+    fixed_price_sub_total = models.DecimalField(
+        "Sub-total (Fixed Price)",
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Sub-total for fixed price deliverables"
+    )
+    fixed_price_allowances = models.DecimalField(
+        "Allowances - Travel, Accommodation and Other Approved Expenses (Fixed Price)",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    fixed_price_other_disbursements = models.DecimalField(
+        "Other proposed disbursements (Fixed Price)",
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+    fixed_price_total = models.DecimalField(
+        "Fixed Price Total",
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # TOTAL PRICE OF CONTRACT
+    # ─────────────────────────────────────────────────────────────────────────
+    total_price = models.DecimalField(
+        "TOTAL PRICE (All prices are GST inclusive)",
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Total contract price including GST"
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # DECLINE TO BID
+    # ─────────────────────────────────────────────────────────────────────────
+    decline_to_bid = models.BooleanField(
+        "Declining to Bid",
+        default=False,
+        help_text="Check if declining to bid for this contract"
+    )
+    decline_no_personnel = models.BooleanField(
+        "No personnel available/qualified",
+        default=False
+    )
+    decline_full_capacity = models.BooleanField(
+        "Currently working at full capacity",
+        default=False
+    )
+    decline_unable_location = models.BooleanField(
+        "Unable to work in specified location",
+        default=False
+    )
+    decline_insufficient_time = models.BooleanField(
+        "Insufficient Quotation Response Period",
+        default=False
+    )
+    decline_conflict_interest = models.BooleanField(
+        "Conflict of Interest",
+        default=False
+    )
+    decline_other = models.BooleanField(
+        "Other",
+        default=False
+    )
+    decline_other_reason = models.TextField(
+        "Other reason for declining (please specify)",
+        blank=True
+    )
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # QUOTATION AUTHORISED BY THE SERVICE PROVIDER
+    # ─────────────────────────────────────────────────────────────────────────
+    rep_title = models.CharField(
+        "Title",
+        max_length=100,
+        blank=True,
+        help_text="Title of company representative authorising this quotation"
+    )
+    rep_name = models.CharField(
+        "Name",
+        max_length=100,
+        blank=True,
+        help_text="Name of company representative authorising this quotation"
+    )
+    rep_position = models.CharField(
+        "Position",
+        max_length=100,
+        blank=True,
+        help_text="Position of company representative"
+    )
+    rep_email = models.EmailField(
+        "Email",
+        blank=True,
+        help_text="Email address of company representative"
+    )
+    rep_telephone = models.CharField(
+        "Telephone",
+        max_length=50,
+        blank=True,
+        help_text="Telephone number of company representative"
+    )
+    
+    # Address
+    address_line1 = models.CharField(
+        "Address Line 1",
+        max_length=255,
+        blank=True
+    )
+    address_line2 = models.CharField(
+        "Address Line 2",
+        max_length=255,
+        blank=True
+    )
+    suburb = models.CharField(
+        "Suburb",
+        max_length=100,
+        blank=True
+    )
+    state = models.CharField(
+        "State",
+        max_length=100,
+        blank=True
+    )
+    postcode = models.CharField(
+        "Postcode",
+        max_length=20,
+        blank=True
+    )
+    
+    # Signature and Date
+    signature = models.CharField(
+        "Signature",
+        max_length=200,
+        blank=True,
+        help_text="Electronic signature of authorised representative"
+    )
+    signature_date = models.DateField(
+        "Date",
+        null=True,
+        blank=True,
+        help_text="Date of quotation authorisation"
+    )
+
+    # Meta
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Quotation"
+        verbose_name_plural = "Quotations"
+
+    def __str__(self):
+        return f"Quotation for {self.application.full_name} — {self.rfqts_no or 'TBC'}"
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate totals
+        if self.time_materials_sub_total or self.time_materials_allowances or self.time_materials_other_disbursements:
+            total = 0
+            if self.time_materials_sub_total:
+                total += self.time_materials_sub_total
+            if self.time_materials_allowances:
+                total += self.time_materials_allowances
+            if self.time_materials_other_disbursements:
+                total += self.time_materials_other_disbursements
+            self.time_materials_total = total
+
+        if self.fixed_price_sub_total or self.fixed_price_allowances or self.fixed_price_other_disbursements:
+            total = 0
+            if self.fixed_price_sub_total:
+                total += self.fixed_price_sub_total
+            if self.fixed_price_allowances:
+                total += self.fixed_price_allowances
+            if self.fixed_price_other_disbursements:
+                total += self.fixed_price_other_disbursements
+            self.fixed_price_total = total
+
+        # Calculate overall total
+        overall_total = 0
+        if self.time_materials_total:
+            overall_total += self.time_materials_total
+        if self.fixed_price_total:
+            overall_total += self.fixed_price_total
+        if overall_total > 0:
+            self.total_price = overall_total
+
+        super().save(*args, **kwargs)
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# TABLE MODELS - For displaying tabular data in Django Admin
+# ═════════════════════════════════════════════════════════════════════════════
+
+
+class QuotationSkillRate(models.Model):
+    """
+    SKILL SETS AND LEVELS / DAILY RATE TABLE
+    """
+    quotation = models.ForeignKey(
+        Quotation,
+        on_delete=models.CASCADE,
+        related_name='skill_rates'
+    )
+    skill_set = models.CharField(
+        "Skill Set (list)",
+        max_length=255,
+        help_text="e.g., Program & Product Management Services & Support"
+    )
+    skill_level = models.CharField(
+        "Skill Level",
+        max_length=100,
+        help_text="e.g., Level 2 - Practitioner"
+    )
+    short_term_rate = models.DecimalField(
+        "Short Term Daily Rate ($)",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="For tasks less than 183 days"
+    )
+    long_term_rate = models.DecimalField(
+        "Long Term Daily Rate ($)",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="For tasks of duration greater than 183 days"
+    )
+
+    class Meta:
+        verbose_name = "Skill Set and Rate"
+        verbose_name_plural = "Skill Sets and Rates"
+
+    def __str__(self):
+        return f"{self.skill_set} - Level {self.skill_level}"
+
+
+class QuotationSpecifiedPersonnel(models.Model):
+    """
+    SPECIFIED PERSONNEL TABLE
+    Names of Specified Personnel proposed to provide Services and the roles that each will undertake
+    """
+    quotation = models.ForeignKey(
+        Quotation,
+        on_delete=models.CASCADE,
+        related_name='specified_personnel'
+    )
+    name = models.CharField(
+        "Name",
+        max_length=200,
+        help_text="Name of specified personnel"
+    )
+    role = models.CharField(
+        "Role",
+        max_length=200,
+        help_text="Role that this person will undertake"
+    )
+
+    class Meta:
+        verbose_name = "Specified Personnel"
+        verbose_name_plural = "Specified Personnel"
+
+    def __str__(self):
+        return f"{self.name} - {self.role}"
+
+
+class QuotationSubcontractor(models.Model):
+    """
+    SUBCONTRACTORS TO BE USED IN PROVIDING THE SERVICES TABLE
+    """
+    quotation = models.ForeignKey(
+        Quotation,
+        on_delete=models.CASCADE,
+        related_name='subcontractors'
+    )
+    company_name = models.CharField(
+        "Subcontractor Company Name",
+        max_length=255
+    )
+    abn = models.CharField(
+        "Subcontractor ABN",
+        max_length=50,
+        blank=True
+    )
+    specified_personnel_names = models.TextField(
+        "Subcontractor Specified Personnel Name(s)",
+        help_text="Names of personnel from this subcontractor"
+    )
+
+    class Meta:
+        verbose_name = "Subcontractor"
+        verbose_name_plural = "Subcontractors"
+
+    def __str__(self):
+        return self.company_name
+
+
+class QuotationTimeMaterialsItem(models.Model):
+    """
+    TIME AND MATERIALS PAYMENT SCHEDULE TABLE
+    Note: Use this table to provide a quotation for tasks based on a level of effort or other time and materials basis.
+    For tasks of duration greater than 183 days Long Term rates must be used.
+    For tasks less than 183 days short term rates apply.
+    The duration of task is as per the RFQTS "Duration of Contract" field.
+    """
+    quotation = models.ForeignKey(
+        Quotation,
+        on_delete=models.CASCADE,
+        related_name='time_materials_items'
+    )
+    skill_set = models.CharField(
+        "Skill Set (as defined in the DSS Deed)",
+        max_length=255,
+        help_text="e.g., Program & Project Management Services & Support"
+    )
+    skill_level = models.CharField(
+        "Skill Level",
+        max_length=100,
+        help_text="Skill level number"
+    )
+    days = models.PositiveIntegerField(
+        "Days (8 hours)",
+        help_text="Number of 8-hour days"
+    )
+    daily_rate_short_term = models.DecimalField(
+        "Daily Rate $ (GST Inc.) - Short Term",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="For tasks less than 183 days"
+    )
+    daily_rate_long_term = models.DecimalField(
+        "Daily Rate $ (GST Inc.) - Long Term",
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="For tasks greater than 183 days"
+    )
+    total_price = models.DecimalField(
+        "Total Price $ GST Inc.",
+        max_digits=15,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Calculated: Days × Daily Rate"
+    )
+
+    class Meta:
+        verbose_name = "Time and Materials Item"
+        verbose_name_plural = "Time and Materials Items"
+
+    def __str__(self):
+        return f"{self.skill_set} - {self.days} days"
+
+    def save(self, *args, **kwargs):
+        # Auto-calculate total price
+        rate = self.daily_rate_long_term if self.daily_rate_long_term else self.daily_rate_short_term
+        if rate and self.days:
+            self.total_price = rate * self.days
+        super().save(*args, **kwargs)
+
+
+class QuotationFixedPriceDeliverable(models.Model):
+    """
+    FIXED PRICE DELIVERABLES AND PAYMENT SCHEDULE TABLE
+    Note: Use this table for fixed price task.
+    """
+    quotation = models.ForeignKey(
+        Quotation,
+        on_delete=models.CASCADE,
+        related_name='fixed_price_deliverables'
+    )
+    deliverable = models.TextField(
+        "Deliverables",
+        help_text="Description of deliverable"
+    )
+    delivery_date = models.DateField(
+        "Delivery Date",
+        help_text="Date when deliverable will be completed"
+    )
+    payment = models.DecimalField(
+        "Payment $ (GST Inc.)",
+        max_digits=12,
+        decimal_places=2,
+        help_text="Payment amount for this deliverable"
+    )
+
+    class Meta:
+        verbose_name = "Fixed Price Deliverable"
+        verbose_name_plural = "Fixed Price Deliverables"
+        ordering = ['delivery_date']
+
+    def __str__(self):
+        return f"{self.deliverable[:50]}..." if len(self.deliverable) > 50 else self.deliverable
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Signals
+# ─────────────────────────────────────────────────────────────────────────────
+@receiver(post_save, sender=JobApplication)
+def create_quotation_for_application(sender, instance, created, **kwargs):
+    """Create a blank Quotation automatically whenever a new job application is created"""
+    if created:
+        job = instance.job
+        rfqts = job.rfqts if job.rfqts else None
+        
+        # Pre-populate basic information from the application and job
+        quotation_data = {
+            'application': instance,
+            'rfqts_no': rfqts.rfqts_no if rfqts else '',
+            'task_title': job.title,
+            'service_provider_name': instance.user.get_full_name() or instance.full_name,
+            'service_provider_abn': instance.abn or '',
+            'location': job.location,
+        }
+        
+        # Create the blank quotation
+        Quotation.objects.create(**quotation_data)
+
+

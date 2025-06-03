@@ -130,7 +130,7 @@ LOGOUT_REDIRECT_URL = '/'  # Redirect to home after logout
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Australia/Sydney'
 
 USE_I18N = True
 

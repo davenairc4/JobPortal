@@ -270,21 +270,21 @@
                         <div class="form-check mb-2">
                             {{ form.written_third_person }}
                             <label class="form-check-label" for="{{ form.written_third_person.id_for_label }}">
-                                {{ form.written_third_person.label }}
+                                {{ form.written_third_person.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.written_third_person.errors %}<div class="text-danger">{{ form.written_third_person.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="form-check mb-2">
                             {{ form.cv_no_gaps }}
                             <label class="form-check-label" for="{{ form.cv_no_gaps.id_for_label }}">
-                                {{ form.cv_no_gaps.label }}
+                                {{ form.cv_no_gaps.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.cv_no_gaps.errors %}<div class="text-danger">{{ form.cv_no_gaps.errors.0 }}</div>{% endif %}
                         </div>
                         <div class="form-check mb-2">
                             {{ form.cv_month_year_listed }}
                             <label class="form-check-label" for="{{ form.cv_month_year_listed.id_for_label }}">
-                                {{ form.cv_month_year_listed.label }}
+                                {{ form.cv_month_year_listed.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.cv_month_year_listed.errors %}<div class="text-danger">{{ form.cv_month_year_listed.errors.0 }}</div>{% endif %}
                         </div>
@@ -321,8 +321,7 @@
                     <div class="card-body">
                         <div class="mb-3">
                             <label class="form-label">
-                                1. For the Project detailed on this form, have you been working on this Project in any capacity within the last 6 months?
-                                <span class="text-danger">*</span>
+                                1. For the Project detailed on this form, have you been working on this Project in any capacity within the last 6 months? <span class="text-danger">*</span>
                             </label>
                             <div>{{ form.worked_on_project }}</div>
                             {% if form.worked_on_project.errors %}<div class="text-danger">{{ form.worked_on_project.errors.0 }}</div>{% endif %}
@@ -330,8 +329,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">
-                                2. For the specific requirement detailed on this form, have you been working on this requirement in any capacity within the last 12 months?
-                                <span class="text-danger">*</span>
+                                2. For the specific requirement detailed on this form, have you been working on this requirement in any capacity within the last 12 months? <span class="text-danger">*</span>
                             </label>
                             <div>{{ form.worked_on_requirement }}</div>
                             {% if form.worked_on_requirement.errors %}<div class="text-danger">{{ form.worked_on_requirement.errors.0 }}</div>{% endif %}
@@ -339,8 +337,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">
-                                3. For roles completed within the past 6 months, have you been involved in the selection of the associated Service Providers in any capacity?
-                                <span class="text-danger">*</span>
+                                3. For roles completed within the past 6 months, have you been involved in the selection of the associated Service Providers in any capacity? <span class="text-danger">*</span>
                             </label>
                             <div>{{ form.involved_in_selection }}</div>
                             {% if form.involved_in_selection.errors %}<div class="text-danger">{{ form.involved_in_selection.errors.0 }}</div>{% endif %}
@@ -348,8 +345,7 @@
 
                         <div class="mb-3">
                             <label class="form-label">
-                                4. Is there a potential for a real or perceived conflict of interest or a probity objection if you perform or contribute to the Project?
-                                <span class="text-danger">*</span>
+                                4. Is there a potential for a real or perceived conflict of interest or a probity objection if you perform or contribute to the Project? <span class="text-danger">*</span>
                             </label>
                             <div>{{ form.potential_conflict }}</div>
                             {% if form.potential_conflict.errors %}<div class="text-danger">{{ form.potential_conflict.errors.0 }}</div>{% endif %}
@@ -385,8 +381,7 @@
 
                             <div class="mb-3">
                                 <label for="{{ form.aps_engagement_details.id_for_label }}" class="form-label">
-                                    a. Details of your most recent area of engagement:
-                                    <span class="text-danger">*</span>
+                                    a. Details of your most recent area of engagement: <span class="text-danger">*</span>
                                 </label>
                                 {{ form.aps_engagement_details }}
                                 {% if form.aps_engagement_details.errors %}<div class="text-danger">{{ form.aps_engagement_details.errors.0 }}</div>{% endif %}
@@ -401,7 +396,9 @@
                                     {% if form.aps_employment_from.errors %}<div class="text-danger">{{ form.aps_employment_from.errors.0 }}</div>{% endif %}
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="{{ form.aps_employment_to.id_for_label }}" class="form-label">To: <span class="text-danger">*</span></label>
+                                    <label for="{{ form.aps_employment_to.id_for_label }}" class="form-label">
+                                        To: <span class="text-danger">*</span>
+                                    </label>
                                     {{ form.aps_employment_to }}
                                     {% if form.aps_employment_to.errors %}<div class="text-danger">{{ form.aps_employment_to.errors.0 }}</div>{% endif %}
                                 </div>
@@ -459,7 +456,9 @@
                                     {% if form.sercat_employment_from.errors %}<div class="text-danger">{{ form.sercat_employment_from.errors.0 }}</div>{% endif %}
                                 </div>
                                 <div class="col-md-6 mb-3">
-                                    <label for="{{ form.sercat_employment_to.id_for_label }}" class="form-label">To: <span class="text-danger">*</span></label>
+                                    <label for="{{ form.sercat_employment_to.id_for_label }}" class="form-label">
+                                        To: <span class="text-danger">*</span>
+                                    </label>
                                     {{ form.sercat_employment_to }}
                                     {% if form.sercat_employment_to.errors %}<div class="text-danger">{{ form.sercat_employment_to.errors.0 }}</div>{% endif %}
                                 </div>
@@ -513,7 +512,7 @@
                         <div class="form-check mb-2">
                             {{ form.declaration_complete_correct }}
                             <label class="form-check-label" for="{{ form.declaration_complete_correct.id_for_label }}">
-                                {{ form.declaration_complete_correct.label }}
+                                {{ form.declaration_complete_correct.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.declaration_complete_correct.errors %}<div class="text-danger">{{ form.declaration_complete_correct.errors.0 }}</div>{% endif %}
                         </div>
@@ -521,7 +520,7 @@
                         <div class="form-check mb-2">
                             {{ form.declaration_no_other_applications }}
                             <label class="form-check-label" for="{{ form.declaration_no_other_applications.id_for_label }}">
-                                {{ form.declaration_no_other_applications.label }}
+                                {{ form.declaration_no_other_applications.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.declaration_no_other_applications.errors %}<div class="text-danger">{{ form.declaration_no_other_applications.errors.0 }}</div>{% endif %}
                         </div>
@@ -530,7 +529,7 @@
                         <div class="form-check mb-2">
                             {{ form.understand_false_info }}
                             <label class="form-check-label" for="{{ form.understand_false_info.id_for_label }}">
-                                {{ form.understand_false_info.label }}
+                                {{ form.understand_false_info.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.understand_false_info.errors %}<div class="text-danger">{{ form.understand_false_info.errors.0 }}</div>{% endif %}
                         </div>
@@ -538,7 +537,7 @@
                         <div class="form-check mb-2">
                             {{ form.understand_additional_enquiries }}
                             <label class="form-check-label" for="{{ form.understand_additional_enquiries.id_for_label }}">
-                                {{ form.understand_additional_enquiries.label }}
+                                {{ form.understand_additional_enquiries.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.understand_additional_enquiries.errors %}<div class="text-danger">{{ form.understand_additional_enquiries.errors.0 }}</div>{% endif %}
                         </div>
@@ -546,7 +545,7 @@
                         <div class="form-check mb-2" id="waiverCheck" style="display:none;">
                             {{ form.understand_waiver_approval }}
                             <label class="form-check-label" for="{{ form.understand_waiver_approval.id_for_label }}">
-                                {{ form.understand_waiver_approval.label }}
+                                {{ form.understand_waiver_approval.label }} <span class="text-danger">*</span>
                             </label>
                             {% if form.understand_waiver_approval.errors %}<div class="text-danger">{{ form.understand_waiver_approval.errors.0 }}</div>{% endif %}
                         </div>
