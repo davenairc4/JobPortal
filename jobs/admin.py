@@ -683,13 +683,11 @@ class QuotationFixedPriceDeliverableAdmin(admin.ModelAdmin):
     get_deliverable_short.short_description = 'Deliverable'
 
 
-# ═════════════════════════════════════════════════════════════════════════════
-# ADMIN SITE CUSTOMIZATION
-# ═════════════════════════════════════════════════════════════════════════════
 
-admin.site.site_header = "Defence Support Services (DSS) Administration"
-admin.site.site_title = "DSS Admin Portal"
-admin.site.index_title = "Welcome to DSS Administration"
 
-# Custom CSS for better visual organization
+admin.site.site_header = "C4 Defence Administration"
+admin.site.site_title = "C4 Defence Admin Portal"
+admin.site.index_title = "Welcome to C4D Administration"
+
+
 admin.site.enable_nav_sidebar = True

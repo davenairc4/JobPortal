@@ -1020,26 +1020,123 @@ class QuotationFixedPriceDeliverable(models.Model):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Signals
+# Signals - Auto-populate Quotation from Application Data Only
 # ─────────────────────────────────────────────────────────────────────────────
 @receiver(post_save, sender=JobApplication)
 def create_quotation_for_application(sender, instance, created, **kwargs):
-    """Create a blank Quotation automatically whenever a new job application is created"""
+    """
+    Create a Quotation automatically when a new job application is created,
+    populating only with data that directly exists in the application.
+    """
     if created:
         job = instance.job
         rfqts = job.rfqts if job.rfqts else None
+        user = instance.user
         
-        # Pre-populate basic information from the application and job
+        # Helper function to parse location info from location_of_residence
+        def parse_location_info(location_str):
+            """Extract suburb/state info from location string"""
+            if not location_str:
+                return '', '', ''
+            parts = [part.strip() for part in location_str.split(',') if part.strip()]
+            if len(parts) >= 2:
+                return parts[0], parts[1], ''  # suburb, state, postcode
+            elif len(parts) == 1:
+                return parts[0], '', ''
+            return '', '', ''
+        
+        # Parse location information
+        suburb, state, postcode = parse_location_info(instance.location_of_residence)
+        
+        # Determine if there's a conflict of interest based on application responses
+        has_conflict = any([
+            instance.potential_conflict,
+            instance.worked_on_project,
+            instance.worked_on_requirement,
+            instance.involved_in_selection,
+            instance.currently_aps,
+            instance.aps_within_12_months,
+            instance.currently_sercat,
+            instance.sercat_within_12_months
+        ])
+        
+        # Build security clearance comments from application data
+        security_comments = []
+        if instance.current_clearance and instance.current_clearance != 'None':
+            security_comments.append(f"Current clearance: {instance.current_clearance}")
+        if instance.clearance_expiry_date:
+            security_comments.append(f"Expiry date: {instance.clearance_expiry_date}")
+        if instance.agsva_cs_number:
+            security_comments.append(f"AGSVA CS Number: {instance.agsva_cs_number}")
+        
+        # Parse proposed rate (if provided)
+        proposed_rate = None
+        if instance.proposed_contract_rate:
+            import re
+            rate_match = re.search(r'[\d,]+\.?\d*', instance.proposed_contract_rate.replace(',', ''))
+            if rate_match:
+                try:
+                    proposed_rate = float(rate_match.group().replace(',', ''))
+                except ValueError:
+                    pass
+        
+        # Quotation data - only direct mappings from application
         quotation_data = {
             'application': instance,
+            
+            # Basic Information from application/job/rfqts
             'rfqts_no': rfqts.rfqts_no if rfqts else '',
             'task_title': job.title,
-            'service_provider_name': instance.user.get_full_name() or instance.full_name,
-            'service_provider_abn': instance.abn or '',
+            'service_provider_name': instance.full_name,
+            'service_provider_abn': instance.abn,
             'location': job.location,
+            
+            # Personnel CV attachment status
+            'personnel_cv_attached': bool(instance.resume),
+            
+            # Security Requirements from application
+            'security_clearance_comments': '\n'.join(security_comments),
+            
+            # Services - methodology from application experience fields
+            'methodology': instance.industry_engagement_experience,
+            'conflict_of_interest': not has_conflict,  # Inverted because field asks for "no conflict"
+            'other_services_comments': instance.unique_skills,
+            
+            # Representative Information from application
+            'rep_name': instance.full_name,
+            'rep_email': user.email if user else '',
+            
+            # Address from parsed location
+            'suburb': suburb,
+            'state': state,
+            'postcode': postcode,
+            
+            # Signature from application
+            'signature': instance.electronic_signature,
+            'signature_date': instance.signature_date,
         }
         
-        # Create the blank quotation
-        Quotation.objects.create(**quotation_data)
-
-
+        # Create the quotation
+        quotation = Quotation.objects.create(**quotation_data)
+        
+        # Auto-create QuotationSpecifiedPersonnel entry with applicant
+        QuotationSpecifiedPersonnel.objects.create(
+            quotation=quotation,
+            name=instance.full_name,
+            role=job.title
+        )
+        
+        # Auto-create QuotationSkillRate entries if skills and rate provided
+        if job.skills_sets and proposed_rate:
+            skills = [skill.strip() for skill in job.skills_sets.split(',')]
+            skill_level = job.skills_levels or ''
+            
+            for skill in skills:
+                if skill:
+                    QuotationSkillRate.objects.create(
+                        quotation=quotation,
+                        skill_set=skill,
+                        skill_level=skill_level,
+                        short_term_rate=proposed_rate,
+                        long_term_rate=proposed_rate
+                    )
