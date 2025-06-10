@@ -1,0 +1,92 @@
+/* jobs/static/admin/css/rfqts_admin.css */
+
+/* PDF Extraction Status Table Styling */
+.pdf-extraction-status table {
+  margin-top: 10px;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.pdf-extraction-status th,
+.pdf-extraction-status td {
+  padding: 8px;
+  text-align: left;
+  border: 1px solid #ddd;
+}
+
+.pdf-extraction-status th {
+  font-weight: bold;
+}
+
+/* Status indicators */
+.pdf-extraction-status .status-success {
+  font-weight: bold;
+}
+
+.pdf-extraction-status .status-error {
+  font-weight: bold;
+}
+
+.pdf-extraction-status .status-warning {
+  font-weight: bold;
+}
+
+/* Field mapping configuration */
+.field-mapping-help {
+  border: 1px solid #2196f3;
+  border-radius: 4px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.field-mapping-help h4 {
+  margin-top: 0;
+}
+
+.field-mapping-help ul {
+  margin-bottom: 0;
+}
+
+/* PDF upload area enhancement */
+.field-rfq_file {
+  padding: 15px;
+  border-radius: 4px;
+  border: 2px dashed #ccc;
+}
+
+/* Field mapping inline styling */
+#rfqtsfield_set-group .tabular td {
+  vertical-align: middle;
+}
+
+#rfqtsfield_set-group .tabular input[type="text"] {
+  width: 95%;
+}
+
+#rfqtsfield_set-group .tabular select {
+  width: 100%;
+}
+
+/* Extraction preview section */
+.extraction-preview {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.extraction-preview h3 {
+  margin-top: 0;
+}
+
+/* Responsive improvements */
+@media (max-width: 767px) {
+  .pdf-extraction-status table {
+    font-size: 12px;
+  }
+
+  .pdf-extraction-status th,
+  .pdf-extraction-status td {
+    padding: 4px;
+  }
+}

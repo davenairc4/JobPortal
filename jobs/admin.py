@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
+from django.contrib import messages
 from .models import (
     RFQTS, Job, Position, Advertisement, JobApplication, 
     Quotation, QuotationSkillRate, QuotationSpecifiedPersonnel, 
@@ -26,11 +27,6 @@ class QuotationSkillRateInline(admin.TabularInline):
     ]
     verbose_name = "Skill Set and Rate"
     verbose_name_plural = "SKILL SETS AND LEVELS / DAILY RATE"
-    
-    class Media:
-        css = {
-            'all': ('admin/css/custom_admin.css',)
-        }
 
 
 class QuotationSpecifiedPersonnelInline(admin.TabularInline):
@@ -97,7 +93,8 @@ class RFQTSAdmin(admin.ModelAdmin):
         'department', 
         'location', 
         'closing_date_for_quotation', 
-        'created_at'
+        'created_at',
+        'pdf_status'
     ]
     list_filter = [
         'department', 
@@ -129,12 +126,14 @@ class RFQTSAdmin(admin.ModelAdmin):
                 'rfqts_type',
                 'service_category',
                 'scope_of_task',
+                'statement_of_duties',
                 'deliverables',
                 'location'
             ]
         }),
         ('Dates', {
             'fields': [
+                'date_rfqts_received',
                 'commencement_date_for_task',
                 'completion_date_for_task',
                 'closing_date_for_quotation'
@@ -144,13 +143,17 @@ class RFQTSAdmin(admin.ModelAdmin):
             'fields': [
                 'skills_sets',
                 'skills_levels',
+                'max_rate_per_day',
+                'max_cvs',
                 'specified_personnel',
-                'security_clearances_required_for_personnel'
+                'security_clearances_required_for_personnel',
+                'security_guidance'
             ]
         }),
         ('Additional Information', {
             'fields': [
                 'evaluation_criteria',
+                'key_result_areas',
                 'applicable_standards_or_references',
                 'allowances_or_disbursements',
                 'other_relevant_information_or_special_requirements',
@@ -163,9 +166,113 @@ class RFQTSAdmin(admin.ModelAdmin):
             'fields': [
                 'quote_form_type',
                 'rfq_file'
-            ]
+            ],
+            'description': mark_safe('<strong>Upload a PDF file to automatically extract and populate form fields.</strong><br>Supported format: RFQTS PDF documents')
         })
     ]
+
+    def pdf_status(self, obj):
+        """Display PDF upload status"""
+        if obj.rfq_file:
+            return format_html(
+                '<span style="color: green;">✓ PDF Uploaded</span>'
+            )
+        return format_html(
+            '<span style="color: gray;">− No PDF</span>'
+        )
+    pdf_status.short_description = 'PDF Status'
+
+    def save_model(self, request, obj, form, change):
+        """Override save to trigger PDF extraction when file is uploaded"""
+        # Store original values to check what was extracted
+        original_values = {}
+        if change and obj.rfq_file:
+            for field in obj._meta.fields:
+                if hasattr(obj, field.name):
+                    original_values[field.name] = getattr(obj, field.name)
+        
+        # Check if this is an update and if a new file was uploaded
+        if change and 'rfq_file' in form.changed_data and obj.rfq_file:
+            # Save first to ensure file is properly stored
+            super().save_model(request, obj, form, change)
+            
+            # Extract data from PDF
+            extraction_successful = obj.extract_pdf_data()
+            
+            if extraction_successful:
+                # Save again with extracted data
+                obj.save()
+                
+                # Build list of extracted fields
+                extracted_fields = []
+                for field_name, original_value in original_values.items():
+                    new_value = getattr(obj, field_name)
+                    if str(original_value) != str(new_value) and new_value:
+                        field = obj._meta.get_field(field_name)
+                        verbose_name = field.verbose_name if hasattr(field, 'verbose_name') else field_name
+                        extracted_fields.append(verbose_name)
+                
+                if extracted_fields:
+                    fields_list = ', '.join(extracted_fields[:5])
+                    if len(extracted_fields) > 5:
+                        fields_list += f' and {len(extracted_fields) - 5} more fields'
+                    
+                    messages.success(
+                        request, 
+                        format_html(
+                            'PDF data extracted successfully from <strong>{}</strong>!<br>'
+                            'Populated fields: {}',
+                            obj.rfq_file.name,
+                            fields_list
+                        )
+                    )
+                else:
+                    messages.info(
+                        request,
+                        f'PDF "{obj.rfq_file.name}" processed but no new data was extracted. The document may not contain recognizable RFQTS fields.'
+                    )
+            else:
+                messages.warning(
+                    request,
+                    format_html(
+                        'PDF "<strong>{}</strong>" uploaded but data extraction failed. '
+                        'Please check the file format and ensure it\'s a valid RFQTS document, '
+                        'or fill fields manually.',
+                        obj.rfq_file.name
+                    )
+                )
+        elif not change and obj.rfq_file:
+            # New object with PDF file
+            # Save first to get the file properly stored
+            super().save_model(request, obj, form, change)
+            
+            # Then extract data
+            extraction_successful = obj.extract_pdf_data()
+            
+            if extraction_successful:
+                # Save again with extracted data
+                obj.save()
+                messages.success(
+                    request, 
+                    format_html(
+                        'PDF data extracted successfully from <strong>{}</strong>! '
+                        'Please review all populated fields.',
+                        obj.rfq_file.name
+                    )
+                )
+            else:
+                messages.warning(
+                    request,
+                    format_html(
+                        'PDF "<strong>{}</strong>" uploaded but data extraction failed. '
+                        'Please check the file format and ensure it\'s a valid RFQTS document, '
+                        'or fill fields manually.',
+                        obj.rfq_file.name
+                    )
+                )
+        else:
+            # Normal save without PDF upload
+            super().save_model(request, obj, form, change)
 
 
 @admin.register(Job)
@@ -585,12 +692,6 @@ class QuotationAdmin(admin.ModelAdmin):
             readonly.extend(['created_at', 'updated_at'])
         return readonly
 
-    class Media:
-        css = {
-            'all': ('admin/css/quotation_admin.css',)
-        }
-        js = ('admin/js/quotation_admin.js',)
-
 
 # ═════════════════════════════════════════════════════════════════════════════
 # STANDALONE TABLE MODEL ADMINS (for individual management if needed)
@@ -683,11 +784,12 @@ class QuotationFixedPriceDeliverableAdmin(admin.ModelAdmin):
     get_deliverable_short.short_description = 'Deliverable'
 
 
-
+# ═════════════════════════════════════════════════════════════════════════════
+# ADMIN SITE CONFIGURATION
+# ═════════════════════════════════════════════════════════════════════════════
 
 admin.site.site_header = "C4 Defence Administration"
 admin.site.site_title = "C4 Defence Admin Portal"
 admin.site.index_title = "Welcome to C4D Administration"
-
 
 admin.site.enable_nav_sidebar = True

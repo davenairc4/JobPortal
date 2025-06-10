@@ -1,4 +1,6 @@
 import uuid
+import re
+from datetime import datetime
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -7,37 +9,118 @@ from users.models import CustomUser
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
+# PDF processing imports
+try:
+    import PyPDF2
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+
+
+class RFQTSFieldMapping(models.Model):
+    """
+    Configurable field mappings for PDF extraction per RFQTS
+    """
+    name = models.CharField(max_length=200, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "RFQTS Field Mapping Template"
+        verbose_name_plural = "RFQTS Field Mapping Templates"
+    
+    def __str__(self):
+        return self.name
+
+
+class RFQTSField(models.Model):
+    """
+    Individual field configuration for PDF extraction
+    """
+    FIELD_TYPES = [
+        ('text', 'Text'),
+        ('date', 'Date'),
+        ('decimal', 'Decimal'),
+        ('multiline', 'Multi-line Text'),
+        ('table', 'Table'),
+    ]
+    
+    mapping_template = models.ForeignKey(RFQTSFieldMapping, related_name='fields', on_delete=models.CASCADE)
+    field_name = models.CharField(max_length=100, help_text="Model field name (e.g., 'rfqts_no')")
+    display_name = models.CharField(max_length=200, help_text="Display name for admin")
+    pdf_label = models.CharField(max_length=200, help_text="Label to search for in PDF (e.g., 'RFQTS Number:')")
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPES, default='text')
+    extract_until = models.CharField(max_length=200, blank=True, help_text="Stop extraction at this label/pattern")
+    extraction_pattern = models.TextField(blank=True, help_text="Custom regex pattern for extraction")
+    is_required = models.BooleanField(default=False)
+    order = models.IntegerField(default=0)
+    
+    class Meta:
+        ordering = ['order', 'field_name']
+        unique_together = ['mapping_template', 'field_name']
+    
+    def __str__(self):
+        return f"{self.display_name} ({self.field_name})"
+
 
 class RFQTS(models.Model):
     """
     Request for Quotation and Tasking Statement
     """
+    # Basic fields
     rfqts_no = models.CharField(max_length=200, default='RFQ-0000')  
     department = models.CharField(max_length=200, default='General')  
     group = models.CharField(max_length=200, default='Default Group')  
     directorate = models.CharField(max_length=200, default='Default Directorate')  
     project_section = models.CharField(max_length=200, default='Default Project Section') 
-    task_title = models.CharField(max_length=200, default='Default Task Title') 
+    task_title = models.CharField(max_length=500, default='Default Task Title') 
+    
+    # Date fields
     commencement_date_for_task = models.DateField(null=True, blank=True)  
     completion_date_for_task = models.DateField(null=True, blank=True)  
-    rfqts_type = models.CharField(max_length=200, default='General')  
     closing_date_for_quotation = models.DateField(null=True, blank=True)
+    date_rfqts_received = models.DateField(null=True, blank=True)  # New field
+    
+    # Type and category
+    rfqts_type = models.CharField(max_length=200, default='General')  
+    service_category = models.CharField(max_length=200, default='Default Service Category')  
+    quote_form_type = models.CharField(max_length=200, default='Standard')
+    
+    # Skills and rates
     skills_sets = models.TextField(default='Default Skills Set')  
     skills_levels = models.CharField(max_length=200, default='Entry Level')  
-    service_category = models.CharField(max_length=200, default='Default Service Category')  
+    max_rate_per_day = models.CharField(max_length=100, blank=True)  # New field
+    max_cvs = models.CharField(max_length=50, blank=True)  # New field
+    
+    # Location and scope
+    location = models.CharField(max_length=255, default='ACT')  
     scope_of_task = models.TextField(default='Default Scope') 
-    location = models.CharField(max_length=50, default='ACT')  
+    statement_of_duties = models.TextField(blank=True)  # New field to separate from scope
+    
+    # Deliverables and requirements
     deliverables = models.TextField(default='Default Deliverables')
     specified_personnel = models.TextField(default='Not Specified')
     evaluation_criteria = models.TextField(default="evaluate")  
+    
+    # Standards and conditions
     applicable_standards_or_references = models.TextField(default='None') 
     allowances_or_disbursements = models.TextField(default='None') 
     other_relevant_information_or_special_requirements = models.TextField(default='None')  
     special_conditions = models.TextField(default='None')  
     extension_options = models.TextField(default='None')  
+    
+    # Security
     security_clearances_required_for_personnel = models.TextField(default='None')  
-    quote_form_type = models.CharField(max_length=200, default='Standard')
+    security_guidance = models.TextField(blank=True)  # New field
+    
+    # Key Result Areas
+    key_result_areas = models.TextField(blank=True)  # New field
+    
+    # Files and metadata
     rfq_file = models.FileField(upload_to='rfq_files/', blank=True, null=True)
+    field_mapping = models.ForeignKey(RFQTSFieldMapping, null=True, blank=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -48,6 +131,526 @@ class RFQTS(models.Model):
     def __str__(self):
         return self.rfqts_no
 
+    def extract_pdf_data(self):
+        """
+        Extract data from uploaded PDF and populate relevant fields
+        """
+        if not self.rfq_file or not PDF_AVAILABLE:
+            return False
+        
+        try:
+            # Read entire PDF content as one continuous text
+            pdf_text = self._read_pdf_content()
+            if not pdf_text:
+                return False
+            
+            # Extract data using improved parsing
+            extracted_data = self._parse_pdf_content(pdf_text)
+            
+            if not extracted_data:
+                return False
+            
+            # Update fields with extracted data
+            updated_fields = []
+            for field_name, value in extracted_data.items():
+                if hasattr(self, field_name) and value:
+                    current_value = getattr(self, field_name)
+                    if self._should_update_field(field_name, current_value):
+                        setattr(self, field_name, value)
+                        updated_fields.append(field_name)
+            
+            return len(updated_fields) > 0
+            
+        except Exception as e:
+            print(f"PDF extraction error: {str(e)}")
+            return False
+
+    def _read_pdf_content(self):
+        """
+        Read entire PDF as continuous text, preserving structure
+        """
+        try:
+            self.rfq_file.seek(0)
+            pdf_reader = PyPDF2.PdfReader(self.rfq_file)
+            
+            # Combine all pages into one continuous text
+            full_text = ""
+            for page_num, page in enumerate(pdf_reader.pages):
+                page_text = page.extract_text()
+                # Add page break marker for reference but process as continuous text
+                full_text += f"\n[PAGE_{page_num + 1}]\n" + page_text
+            
+            return full_text
+            
+        except Exception as e:
+            print(f"Error reading PDF: {str(e)}")
+            return ""
+
+    def _parse_pdf_content(self, text):
+        """
+        Parse PDF content with improved extraction logic
+        """
+        extracted_data = {}
+        
+        # Clean the text first
+        text = self._clean_pdf_text(text)
+        
+        # Extract RFQTS Number - improved pattern
+        rfqts_patterns = [
+            r'RFQTS\s+Number:?\s*([A-Z0-9\-]+)',
+            r'RFQTS\s+No\.?\s*:?\s*([A-Z0-9\-]+)',
+            r'(?:Task\s+Title:\s*)?([A-Z]{3,4}-\d{2}-\d{4}[A-Z]?)',
+        ]
+        for pattern in rfqts_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                extracted_data['rfqts_no'] = match.group(1).strip()
+                break
+        
+        # Extract basic organizational fields with precise patterns
+        org_fields = {
+            'department': [
+                r'Department:\s*([A-Za-z\s]+?)(?:\s+Group:|$|\n)',
+                r'Department\s*:\s*([A-Za-z]+)(?:\s+Group|\s*$|\s*\n)',
+            ],
+            'group': [
+                r'Group:\s*([A-Za-z\s]+?)(?:\s+Directorate:|$|\n)',
+                r'Group\s*:\s*([A-Za-z\s]+?)(?:\s+Directorate|\s*$|\s*\n)',
+            ],
+            'directorate': [
+                r'Directorate:\s*([A-Za-z\s]+?)(?:\s+Project/Section:|$|\n)',
+                r'Directorate\s*:\s*([A-Za-z\s]+?)(?:\s+Project|\s*$|\s*\n)',
+            ],
+            'project_section': [
+                r'Project/Section:\s*([A-Za-z\s]+?)(?:\s+Task\s+Title:|$|\n)',
+                r'Project/Section\s*:\s*([A-Za-z\s]+?)(?:\s+Task|\s*$|\s*\n)',
+            ],
+        }
+        
+        for field_name, patterns in org_fields.items():
+            for pattern in patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    value = match.group(1).strip()
+                    # Clean the extracted value
+                    value = re.sub(r'\s+', ' ', value)  # Normalize whitespace
+                    value = re.sub(r'^[:\-\s]+|[:\-\s]+$', '', value)  # Remove leading/trailing punctuation
+                    if value and len(value) > 1:  # Avoid single letters/numbers
+                        extracted_data[field_name] = value
+                        break
+        
+        # Extract Task Title with improved boundary detection
+        title_patterns = [
+            r'Task\s+Title:\s*([^\n\r]+?)(?=\s+Commencement\s+date)',
+            r'Task\s+Title:\s*([A-Z0-9\-\s]+?)\s+Commencement',
+            r'Task\s+Title:\s*([^\n\r]+)',
+        ]
+        for pattern in title_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                title = match.group(1).strip()
+                # Remove any trailing metadata
+                title = re.sub(r'\s+(Commencement|RFQTS|Date).*$', '', title, flags=re.IGNORECASE)
+                if title:
+                    extracted_data['task_title'] = title
+                    break
+        
+        # Extract Dates with multiple patterns and better validation
+        date_fields = {
+            'commencement_date_for_task': [
+                r'Commencement\s+date\s+for\s+Task:\s*(\d{1,2}/\d{1,2}/\d{4})',
+                r'Commencement\s+date.*?(\d{1,2}/\d{1,2}/\d{4})',
+            ],
+            'completion_date_for_task': [
+                r'Completion\s+date\s+required\s+for\s+Task:\s*(\d{1,2}/\d{1,2}/\d{4})',
+                r'Completion\s+date.*?required.*?(\d{1,2}/\d{1,2}/\d{4})',
+            ],
+            'date_rfqts_received': [
+                r'Date\s+RFQTS\s+Received:\s*(\d{1,2}/\d{1,2}/\d{4})',
+                r'RFQTS\s+Received:\s*(\d{1,2}/\d{1,2}/\d{4})',
+            ],
+            'closing_date_for_quotation': [
+                r'Due\s+to\s+SME\s+Gateway\s+by\s+\d+am:\s*(\d{1,2}/\d{1,2}/\d{4})',
+                r'Due\s+to\s+SME\s+Gateway.*?(\d{1,2}/\d{1,2}/\d{4})',
+                r'Gateway.*?(\d{1,2}/\d{1,2}/\d{4})',
+            ]
+        }
+        
+        for field_name, patterns in date_fields.items():
+            for pattern in patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    date_val = self._parse_date(match.group(1))
+                    if date_val:
+                        extracted_data[field_name] = date_val
+                        break
+        
+        # Extract RFQTS Type
+        type_patterns = [
+            r'RFQTS\s+Type:\s*([^\n\r]+?)(?=\s+Date\s+RFQTS)',
+            r'RFQTS\s+Type:\s*([^\n\r]+)',
+        ]
+        for pattern in type_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                rfqts_type = match.group(1).strip()
+                if rfqts_type:
+                    extracted_data['rfqts_type'] = rfqts_type
+                    break
+        
+        # Extract Skills Table Data with completely rewritten logic
+        skills_data = self._extract_skills_table_improved(text)
+        if skills_data:
+            extracted_data.update(skills_data)
+        
+        # Extract multi-line sections with better boundary detection
+        extracted_data.update(self._extract_multiline_sections_improved(text))
+        
+        return extracted_data
+
+    def _extract_skills_table_improved(self, text):
+        """
+        Fixed skills table extraction to correctly extract all values from the PDF
+        """
+        data = {}
+        
+        # Find the skills table section more precisely
+        # The table starts with headers and ends with MAX CVs or next section
+        table_pattern = r'Skill\s+Set\(s\)\s+Skill\s+Level\(s\)\s+Service.*?Category.*?Max\s+Rate.*?Day.*?(.*?)(?=MAX\s+\d+\s+CVs|Scope\s+of\s+Task|\Z)'
+        table_match = re.search(table_pattern, text, re.IGNORECASE | re.DOTALL)
+        
+        if table_match:
+            table_content = table_match.group(1)
+            print(f"DEBUG - Table content found: {repr(table_content)}")
+            
+            # Extract Skills Set: Look for various patterns of services & support
+            # This spans multiple lines in the PDF
+            skills_patterns = [
+                r'([A-Za-z\s&]+\s+Services\s*&\s*Support)',
+                r'([A-Za-z\s&]+\s+Management\s+Services\s*&\s*Support)',
+                r'([A-Za-z\s&]+\s+Services)',
+            ]
+            
+            for pattern in skills_patterns:
+                match = re.search(pattern, table_content, re.IGNORECASE | re.DOTALL)
+                if match:
+                    skills_set = re.sub(r'\s+', ' ', match.group(1).strip())
+                    data['skills_sets'] = skills_set
+                    print(f"DEBUG - Extracted skills_sets: {skills_set}")
+                    break
+            
+            # Extract Skills Level: Look for Level patterns
+            # This also spans multiple lines in the PDF
+            level_patterns = [
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?)(?=\s+[A-Z][a-z]|\s*\$|\n\n)',
+                r'(Level\s+\d+\s*[-–—]\s*Advanced\s+Practitioner)',
+                r'(Level\s+\d+\s*[-–—]\s*Intermediate\s+Practitioner)',
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+)',
+            ]
+            
+            for pattern in level_patterns:
+                match = re.search(pattern, table_content, re.IGNORECASE | re.DOTALL)
+                if match:
+                    level = re.sub(r'\s+', ' ', match.group(1).strip())
+                    data['skills_levels'] = level
+                    print(f"DEBUG - Extracted skills_levels: {level}")
+                    break
+            
+            # Extract Service Category: Look for any service category (more flexible)
+            # This can be various types of services, not just "Program Management Services"
+            service_patterns = [
+                # Pattern for multi-word service categories that may span lines
+                r'([A-Z][A-Za-z\s]*(?:Engineering|Management|Technical|Administrative|Support|Financial|Legal|IT|Communications|Research|Development|Consulting|Analysis|Design|Construction|Maintenance|Operations|Security|Quality|Training|Education|Health|Environmental|Logistics)\s+Services)',
+                # Pattern for single word service categories
+                r'\b([A-Z][A-Za-z]*)\s*(?=\s*\$|\s*MAX|\n)',
+                # Backup pattern for any capitalized words that could be service categories
+                r'([A-Z][A-Za-z\s]+?)(?=\s*\$|\s*MAX)',
+            ]
+            
+            for pattern in service_patterns:
+                match = re.search(pattern, table_content, re.IGNORECASE | re.DOTALL)
+                if match:
+                    service_category = re.sub(r'\s+', ' ', match.group(1).strip())
+                    # Filter out some common false positives
+                    if not re.match(r'^(Level|Support|Services|Set|Rate|Day|GST|Max|inc)$', service_category, re.IGNORECASE):
+                        data['service_category'] = service_category
+                        print(f"DEBUG - Extracted service_category: {service_category}")
+                        break
+            
+            # Extract Max Rate: "$xxx" (as shown in the PDF)
+            rate_patterns = [
+                r'\$\s*([a-zA-Z0-9,]+\.?\d*)',  # Matches $xxx or actual amounts
+                r'Max\s+Rate[^$]*\$\s*([a-zA-Z0-9,]+\.?\d*)',
+            ]
+            
+            for pattern in rate_patterns:
+                match = re.search(pattern, table_content, re.IGNORECASE)
+                if match:
+                    rate_value = match.group(1)
+                    data['max_rate_per_day'] = f"${rate_value}"
+                    print(f"DEBUG - Extracted max_rate_per_day: ${rate_value}")
+                    break
+        
+        # If table extraction failed, try searching in the broader text
+        if not data:
+            print("DEBUG - Table extraction failed, trying broader search")
+            
+            # Look for skills sets in the broader text
+            skills_patterns = [
+                r'([A-Za-z\s&]+\s+Services\s*&\s*Support)',
+                r'([A-Za-z\s&]+\s+Management\s+Services\s*&\s*Support)',
+                r'([A-Za-z\s&]+\s+Services)',
+            ]
+            
+            for pattern in skills_patterns:
+                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    skills_set = re.sub(r'\s+', ' ', match.group(1).strip())
+                    data['skills_sets'] = skills_set
+                    break
+            
+            # Look for skills levels
+            level_patterns = [
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?)(?=\s+[A-Z][a-z]|\s*\$|\n\n)',
+                r'(Level\s+\d+\s*[-–—]\s*Advanced\s+Practitioner)',
+                r'(Level\s+\d+\s*[-–—]\s*Intermediate\s+Practitioner)',
+            ]
+            
+            for pattern in level_patterns:
+                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    level = re.sub(r'\s+', ' ', match.group(1).strip())
+                    data['skills_levels'] = level
+                    break
+            
+            # Look for service category in broader text (flexible patterns)
+            service_patterns = [
+                r'([A-Z][A-Za-z\s]*(?:Engineering|Management|Technical|Administrative|Support|Financial|Legal|IT|Communications|Research|Development|Consulting|Analysis|Design|Construction|Maintenance|Operations|Security|Quality|Training|Education|Health|Environmental|Logistics)\s+Services)',
+            ]
+            
+            for pattern in service_patterns:
+                match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    service_category = re.sub(r'\s+', ' ', match.group(1).strip())
+                    data['service_category'] = service_category
+                    break
+            
+            # Look for max rate
+            rate_patterns = [
+                r'\$\s*([a-zA-Z0-9,]+\.?\d*)',
+            ]
+            
+            for pattern in rate_patterns:
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    rate_value = match.group(1)
+                    data['max_rate_per_day'] = f"${rate_value}"
+                    break
+        
+        # Extract MAX CVs from the full text
+        max_cvs_patterns = [
+            r'MAX\s+(\d+)\s+CVs',
+            r'Maximum\s+(\d+)\s+CV',
+        ]
+        
+        for pattern in max_cvs_patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                data['max_cvs'] = match.group(1)
+                print(f"DEBUG - Extracted max_cvs: {data['max_cvs']}")
+                break
+        
+        print(f"DEBUG - Final extracted skills data: {data}")
+        return data
+
+    def _extract_multiline_sections_improved(self, text):
+        """
+        Extract multiline text sections with improved boundary detection
+        """
+        data = {}
+        
+        # Define section mappings with improved patterns and boundaries
+        sections = [
+            ('scope_of_task', [
+                r'Scope\s+of\s+Task:\s*(.*?)(?=Statement\s+of\s+Duties|Location\(s\)|Deliverables)',
+                r'Scope\s+of\s+Task:(.*?)(?=\n\s*[A-Z][A-Za-z\s]*:)',
+            ]),
+            ('statement_of_duties', [
+                r'Statement\s+of\s+Duties[:\s]*(.*?)(?=Location\(s\):|Deliverables:|Specified\s+Personnel)',
+            ]),
+            ('location', [
+                r'Location\(s\):\s*(.*?)(?=Deliverables:|Statement\s+of|Specified\s+Personnel)',
+            ]),
+            ('deliverables', [
+                r'Deliverables:\s*(.*?)(?=Specified\s+Personnel:|Evaluation\s+Criteria:|Security\s+Clearance)',
+            ]),
+            ('specified_personnel', [
+                r'Specified\s+Personnel:\s*(.*?)(?=Evaluation\s+Criteria:|Security\s+Clearance|Applicable\s+Standards)',
+            ]),
+            ('evaluation_criteria', [
+                r'Evaluation\s+Criteria:\s*(.*?)(?=Applicable\s+Standards|Key\s+Result\s+Areas|Security\s+Clearance)',
+            ]),
+            ('applicable_standards_or_references', [
+                r'Applicable\s+Standards\s+or\s+references:\s*(.*?)(?=Allowances\s+or\s+disbursements|Key\s+Result\s+Areas)',
+            ]),
+            ('allowances_or_disbursements', [
+                r'Allowances\s+or\s+disbursements:\s*(.*?)(?=Other\s+relevant\s+information|Special\s+Conditions)',
+            ]),
+            ('other_relevant_information_or_special_requirements', [
+                r'Other\s+relevant\s+information\s+or\s+special\s+requirements:\s*(.*?)(?=Special\s+Conditions|Extension\s+Options)',
+            ]),
+            ('special_conditions', [
+                r'Special\s+Conditions[:\s]*(.*?)(?=Extension\s+Options|Security\s+Clearance)',
+            ]),
+            ('extension_options', [
+                r'Extension\s+Options[:\s]*(.*?)(?=Security\s+Clearance|Key\s+Result\s+Areas)',
+            ]),
+            ('security_clearances_required_for_personnel', [
+                r'Security\s+Clearance\(s\)\s+required\s+for\s+personnel\s+working\s+on\s+this\s+Task:\s*(.*?)(?=Security\s+Guidance|Key\s+Result\s+Areas)',
+            ]),
+            ('security_guidance', [
+                r'Security\s+Guidance:\s*(.*?)(?=Key\s+Result\s+Areas|$)',
+            ]),
+            ('key_result_areas', [
+                r'Key\s+Result\s+Areas[:\s]*(.*?)$',
+            ]),
+        ]
+        
+        for field_name, patterns in sections:
+            for pattern in patterns:
+                match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+                if match:
+                    content = match.group(1).strip()
+                    content = self._clean_extracted_content(content, 'multiline')
+                    if content and len(content) > 5:  # Avoid very short extractions
+                        data[field_name] = content
+                        break
+        
+        return data
+
+    def _clean_pdf_text(self, text):
+        """
+        Clean PDF text while preserving structure
+        """
+        # Remove page markers but keep the content continuous
+        text = re.sub(r'\[PAGE_\d+\]', '\n', text)
+        
+        # Remove OFFICIAL headers/footers
+        text = re.sub(r'\n\s*\d+\s+OFFICIAL\s*\n', '\n', text, flags=re.IGNORECASE)
+        text = re.sub(r'\n\s*OFFICIAL\s*\n', '\n', text, flags=re.IGNORECASE)
+        
+        # Remove standalone page numbers at line start/end
+        text = re.sub(r'^\s*\d+\s*$', '', text, flags=re.MULTILINE)
+        
+        # Normalize whitespace but preserve single line breaks
+        text = re.sub(r'\n{3,}', '\n\n', text)
+        text = re.sub(r'\r\n', '\n', text)
+        text = re.sub(r'\r', '\n', text)
+        
+        return text
+
+    def _clean_extracted_content(self, content, field_type):
+        """
+        Clean extracted content based on field type
+        """
+        if not content:
+            return ""
+        
+        # Remove page artifacts
+        content = re.sub(r'\d+\s+OFFICIAL', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'OFFICIAL', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'^\s*\d+\s*$', '', content, flags=re.MULTILINE)
+        
+        # Remove common extraction artifacts
+        content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)  # Reduce multiple newlines
+        content = re.sub(r'^\s*[:\-\s]+', '', content)  # Remove leading colons/dashes
+        content = re.sub(r'[:\-\s]+\s*$', '', content)   # Remove trailing colons/dashes
+        
+        # For multiline content, preserve structure but clean each line
+        if field_type == 'multiline':
+            lines = content.split('\n')
+            cleaned_lines = []
+            
+            for line in lines:
+                line = line.strip()
+                # Skip empty lines, page numbers, and artifact lines
+                if line and not re.match(r'^\d+$', line) and len(line) > 2:
+                    # Remove common PDF artifacts from line
+                    line = re.sub(r'^[:\-\s]+', '', line)
+                    line = re.sub(r'[:\-\s]+$', '', line)
+                    if line:
+                        cleaned_lines.append(line)
+            
+            return '\n'.join(cleaned_lines)
+        
+        return content.strip()
+
+    def _parse_date(self, date_str):
+        """
+        Parse date from DD/MM/YYYY format with validation
+        """
+        if not date_str:
+            return None
+            
+        try:
+            # Clean the date string
+            date_str = date_str.strip()
+            
+            # Try different date formats
+            date_formats = ['%d/%m/%Y', '%d-%m-%Y', '%d.%m.%Y']
+            
+            for date_format in date_formats:
+                try:
+                    parsed = datetime.strptime(date_str, date_format).date()
+                    # Validate year range
+                    current_year = datetime.now().year
+                    if 2020 <= parsed.year <= current_year + 10:
+                        return parsed
+                except ValueError:
+                    continue
+                    
+        except Exception:
+            pass
+            
+        return None
+
+    def _should_update_field(self, field_name, current_value):
+        """
+        Determine if a field should be updated based on its current value
+        """
+        default_values = {
+            'rfqts_no': 'RFQ-0000',
+            'department': 'General',
+            'group': 'Default Group',
+            'directorate': 'Default Directorate',
+            'project_section': 'Default Project Section',
+            'task_title': 'Default Task Title',
+            'rfqts_type': 'General',
+            'skills_sets': 'Default Skills Set',
+            'skills_levels': 'Entry Level',
+            'service_category': 'Default Service Category',
+            'scope_of_task': 'Default Scope',
+            'location': 'ACT',
+            'deliverables': 'Default Deliverables',
+            'specified_personnel': 'Not Specified',
+            'evaluation_criteria': 'evaluate',
+            'applicable_standards_or_references': 'None',
+            'allowances_or_disbursements': 'None',
+            'other_relevant_information_or_special_requirements': 'None',
+            'special_conditions': 'None',
+            'extension_options': 'None',
+            'security_clearances_required_for_personnel': 'None',
+            'quote_form_type': 'Standard'
+        }
+        
+        # Always update if current value is a default value or empty
+        is_default = current_value == default_values.get(field_name, '')
+        is_empty = not current_value or str(current_value).strip() == ''
+        
+        return is_default or is_empty
+
+
+# [Rest of the models remain the same - Job, Position, Advertisement, JobApplication, Quotation, etc.]
 
 class Job(models.Model):
     """
@@ -1069,17 +1672,6 @@ def create_quotation_for_application(sender, instance, created, **kwargs):
         if instance.agsva_cs_number:
             security_comments.append(f"AGSVA CS Number: {instance.agsva_cs_number}")
         
-        # Parse proposed rate (if provided)
-        proposed_rate = None
-        if instance.proposed_contract_rate:
-            import re
-            rate_match = re.search(r'[\d,]+\.?\d*', instance.proposed_contract_rate.replace(',', ''))
-            if rate_match:
-                try:
-                    proposed_rate = float(rate_match.group().replace(',', ''))
-                except ValueError:
-                    pass
-        
         # Quotation data - only direct mappings from application
         quotation_data = {
             'application': instance,
@@ -1089,7 +1681,7 @@ def create_quotation_for_application(sender, instance, created, **kwargs):
             'task_title': job.title,
             'service_provider_name': instance.full_name,
             'service_provider_abn': instance.abn,
-            'location': job.location,
+            'location': rfqts.location if rfqts else job.location,
             
             # Personnel CV attachment status
             'personnel_cv_attached': bool(instance.resume),
@@ -1126,17 +1718,51 @@ def create_quotation_for_application(sender, instance, created, **kwargs):
             role=job.title
         )
         
-        # Auto-create QuotationSkillRate entries if skills and rate provided
-        if job.skills_sets and proposed_rate:
-            skills = [skill.strip() for skill in job.skills_sets.split(',')]
-            skill_level = job.skills_levels or ''
-            
-            for skill in skills:
-                if skill:
-                    QuotationSkillRate.objects.create(
-                        quotation=quotation,
-                        skill_set=skill,
-                        skill_level=skill_level,
-                        short_term_rate=proposed_rate,
-                        long_term_rate=proposed_rate
-                    )
+        # Auto-create QuotationSkillRate entries from RFQTS skills (no rates)
+        if rfqts and rfqts.skills_sets:
+            QuotationSkillRate.objects.create(
+                quotation=quotation,
+                skill_set=rfqts.skills_sets,
+                skill_level=rfqts.skills_levels or ''
+            )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Create default field mapping if none exists
+# ─────────────────────────────────────────────────────────────────────────────
+@receiver(post_save, sender=RFQTSFieldMapping)
+def create_default_fields(sender, instance, created, **kwargs):
+    """
+    Create default field configurations when a new mapping is created
+    """
+    if created and not instance.fields.exists():
+        default_fields = [
+            {'field_name': 'rfqts_no', 'display_name': 'RFQTS Number', 'pdf_label': 'RFQTS Number:', 'extract_until': 'Department:', 'field_type': 'text', 'order': 1},
+            {'field_name': 'department', 'display_name': 'Department', 'pdf_label': 'Department:', 'extract_until': 'Group:', 'field_type': 'text', 'order': 2},
+            {'field_name': 'group', 'display_name': 'Group', 'pdf_label': 'Group:', 'extract_until': 'Directorate:', 'field_type': 'text', 'order': 3},
+            {'field_name': 'directorate', 'display_name': 'Directorate', 'pdf_label': 'Directorate:', 'extract_until': 'Project/Section:', 'field_type': 'text', 'order': 4},
+            {'field_name': 'project_section', 'display_name': 'Project/Section', 'pdf_label': 'Project/Section:', 'extract_until': 'Task Title:', 'field_type': 'text', 'order': 5},
+            {'field_name': 'task_title', 'display_name': 'Task Title', 'pdf_label': 'Task Title:', 'extract_until': 'Commencement date', 'field_type': 'text', 'order': 6},
+            {'field_name': 'commencement_date_for_task', 'display_name': 'Commencement Date', 'pdf_label': 'Commencement date for Task:', 'extract_until': 'Completion date', 'field_type': 'date', 'order': 7},
+            {'field_name': 'completion_date_for_task', 'display_name': 'Completion Date', 'pdf_label': 'Completion date required for Task:', 'extract_until': 'RFQTS Type:', 'field_type': 'date', 'order': 8},
+            {'field_name': 'rfqts_type', 'display_name': 'RFQTS Type', 'pdf_label': 'RFQTS Type:', 'extract_until': 'Date RFQTS Received:', 'field_type': 'text', 'order': 9},
+            {'field_name': 'date_rfqts_received', 'display_name': 'Date RFQTS Received', 'pdf_label': 'Date RFQTS Received:', 'extract_until': 'Due to SME Gateway', 'field_type': 'date', 'order': 10},
+            {'field_name': 'closing_date_for_quotation', 'display_name': 'Closing Date', 'pdf_label': 'Due to SME Gateway by', 'extract_until': 'Skill Set', 'field_type': 'date', 'order': 11},
+            {'field_name': 'scope_of_task', 'display_name': 'Scope of Task', 'pdf_label': 'Scope of Task:', 'extract_until': 'Statement of Duties', 'field_type': 'multiline', 'order': 12},
+            {'field_name': 'statement_of_duties', 'display_name': 'Statement of Duties', 'pdf_label': 'Statement of Duties', 'extract_until': 'Location(s):', 'field_type': 'multiline', 'order': 13},
+            {'field_name': 'location', 'display_name': 'Location(s)', 'pdf_label': 'Location(s):', 'extract_until': 'Deliverables:', 'field_type': 'multiline', 'order': 14},
+            {'field_name': 'deliverables', 'display_name': 'Deliverables', 'pdf_label': 'Deliverables:', 'extract_until': 'Specified Personnel:', 'field_type': 'multiline', 'order': 15},
+            {'field_name': 'specified_personnel', 'display_name': 'Specified Personnel', 'pdf_label': 'Specified Personnel:', 'extract_until': 'Evaluation Criteria:', 'field_type': 'multiline', 'order': 16},
+            {'field_name': 'evaluation_criteria', 'display_name': 'Evaluation Criteria', 'pdf_label': 'Evaluation Criteria:', 'extract_until': 'Applicable Standards', 'field_type': 'multiline', 'order': 17},
+            {'field_name': 'applicable_standards_or_references', 'display_name': 'Applicable Standards', 'pdf_label': 'Applicable Standards or references:', 'extract_until': 'Allowances or disbursements:', 'field_type': 'multiline', 'order': 18},
+            {'field_name': 'allowances_or_disbursements', 'display_name': 'Allowances/Disbursements', 'pdf_label': 'Allowances or disbursements:', 'extract_until': 'Other relevant information', 'field_type': 'multiline', 'order': 19},
+            {'field_name': 'other_relevant_information_or_special_requirements', 'display_name': 'Other Information', 'pdf_label': 'Other relevant information or special requirements:', 'extract_until': 'Special Conditions', 'field_type': 'multiline', 'order': 20},
+            {'field_name': 'special_conditions', 'display_name': 'Special Conditions', 'pdf_label': 'Special Conditions', 'extract_until': 'Extension Options', 'field_type': 'multiline', 'order': 21},
+            {'field_name': 'extension_options', 'display_name': 'Extension Options', 'pdf_label': 'Extension Options', 'extract_until': 'Security Clearance(s)', 'field_type': 'multiline', 'order': 22},
+            {'field_name': 'security_clearances_required_for_personnel', 'display_name': 'Security Clearances', 'pdf_label': 'Security Clearance(s) required for personnel working on this Task:', 'extract_until': 'Security Guidance:', 'field_type': 'multiline', 'order': 23},
+            {'field_name': 'security_guidance', 'display_name': 'Security Guidance', 'pdf_label': 'Security Guidance:', 'extract_until': 'Key Result Areas', 'field_type': 'multiline', 'order': 24},
+            {'field_name': 'key_result_areas', 'display_name': 'Key Result Areas', 'pdf_label': 'Key Result Areas', 'extract_until': None, 'field_type': 'multiline', 'order': 25},
+        ]
+        
+        for field_data in default_fields:
+            RFQTSField.objects.create(mapping_template=instance, **field_data)

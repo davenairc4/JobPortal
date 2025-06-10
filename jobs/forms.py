@@ -14,7 +14,38 @@ class RFQTSForm(forms.ModelForm):
             'scope_of_task': forms.Textarea(attrs={'rows': 4}),
             'deliverables': forms.Textarea(attrs={'rows': 4}),
             'evaluation_criteria': forms.Textarea(attrs={'rows': 4}),
+            'rfq_file': forms.FileInput(attrs={
+                'accept': '.pdf',
+                'class': 'form-control',
+                'help_text': 'Upload a PDF file to automatically extract and populate form fields'
+            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['rfq_file'].help_text = 'Upload a PDF file to automatically extract and populate form fields'
+
+    def save(self, commit=True):
+        """Override save to trigger PDF extraction when file is uploaded"""
+        instance = super().save(commit=False)
+        
+        # Check if a new PDF file was uploaded
+        if self.files.get('rfq_file') and commit:
+            # Save the instance first to store the file
+            instance.save()
+            
+            # Try to extract data from PDF
+            extraction_successful = instance.extract_pdf_data()
+            
+            if extraction_successful:
+                # Save again with extracted data
+                instance.save()
+            
+            return instance
+        elif commit:
+            instance.save()
+            
+        return instance
 
 
 class JobForm(forms.ModelForm):
