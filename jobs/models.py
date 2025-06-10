@@ -341,8 +341,12 @@ class RFQTS(models.Model):
             
             # Extract Skills Level: Look for Level patterns
             # This also spans multiple lines in the PDF
+            # Extract Skills Level: pattern captures full text like 'Level 3 - Advanced Practitioner'
             level_patterns = [
-                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?)(?=\s+[A-Z][a-z]|\s*\$|\n\n)',
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?Practitioner)',
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?Professional)',
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?Expert)',
+            
                 r'(Level\s+\d+\s*[-–—]\s*Advanced\s+Practitioner)',
                 r'(Level\s+\d+\s*[-–—]\s*Intermediate\s+Practitioner)',
                 r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+)',
@@ -406,12 +410,12 @@ class RFQTS(models.Model):
                 match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
                 if match:
                     skills_set = re.sub(r'\s+', ' ', match.group(1).strip())
-                    data['skills_sets'] = skills_set
-                    break
-            
-            # Look for skills levels
+            # Extract Skills Level: pattern captures full text like 'Level 3 - Advanced Practitioner'
             level_patterns = [
-                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?)(?=\s+[A-Z][a-z]|\s*\$|\n\n)',
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?Practitioner)',
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?Professional)',
+                r'(Level\s+\d+\s*[-–—]\s*[A-Za-z\s]+?Expert)',
+            
                 r'(Level\s+\d+\s*[-–—]\s*Advanced\s+Practitioner)',
                 r'(Level\s+\d+\s*[-–—]\s*Intermediate\s+Practitioner)',
             ]
@@ -511,14 +515,22 @@ class RFQTS(models.Model):
             ('security_guidance', [
                 r'Security\s+Guidance:\s*(.*?)(?=Key\s+Result\s+Areas|$)',
             ]),
-            ('key_result_areas', [
-                r'Key\s+Result\s+Areas[:\s]*(.*?)$',
-            ]),
+            (
+                'key_result_areas',
+                [
+                    r'Key\s+Result\s+Areas\s*'
+                    r'\(If\s+additional\s+KRAs\s+are\s+required\s+to\s+those\s+set\s+out\s+in\s+the\s+Performance\s+Management\s+Framework,'
+                    r'\s+under\s+Attachment\s+G\s+to\s+the\s+Deed\)\s*:'
+                    r'\s*(.*?)'
+                    r'(?=\n\s*\n|\Z)',          # stop at first blank line or EOF
+                ],
+            ),
         ]
         
         for field_name, patterns in sections:
             for pattern in patterns:
-                match = re.search(pattern, text, re.DOTALL | re.IGNORECASE)
+                matches = list(re.finditer(pattern, text, re.DOTALL | re.IGNORECASE))
+                match = matches[-1] if matches else None
                 if match:
                     content = match.group(1).strip()
                     content = self._clean_extracted_content(content, 'multiline')
