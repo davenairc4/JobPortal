@@ -10,4 +10,10 @@ urlpatterns = [
     path("", views.message_list, name="message_list"),
     path("<int:message_id>/", views.message_detail, name="message_detail"),
     path("<int:message_id>/delete/", views.delete_message, name="delete_message"),
+
+    path(
+        "jobs/<int:job_id>/messages/",
+        views.fetch_job_messages,
+        name="fetch_job_messages",   # ← name must be exactly this
+    ),
 ]

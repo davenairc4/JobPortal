@@ -2,7 +2,7 @@
 from django.contrib import messages as flash
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.http import require_POST
 
@@ -91,3 +91,34 @@ def delete_message(request, message_id):
     m.delete()
     flash.success(request, "Message deleted.")
     return redirect("message_list")
+
+@login_required
+def fetch_job_messages(request, job_id):
+    """Return messages sent **after** a given message id for this job."""
+    if request.headers.get('x-requested-with') != 'XMLHttpRequest':
+        return HttpResponseForbidden()
+
+    last_id = request.GET.get('after')
+    try:
+        last_id_int = int(last_id)
+    except (TypeError, ValueError):
+        last_id_int = 0
+
+
+    qs = Message.objects.filter(job_id=job_id).order_by('timestamp')
+    if last_id:
+        qs = qs.filter(id__gt=last_id_int)
+
+    messages_payload = []
+    for m in qs:
+        if request.user not in (m.sender, m.recipient):
+            continue
+        messages_payload.append({
+            "id": m.id,
+            "sender_is_me": m.sender_id == request.user.id,
+            "sender_name": m.sender.get_full_name() or m.sender.email,
+            "timestamp": m.timestamp.strftime("%d %b %Y %H:%M"),
+            "content": m.content.replace('\n', '<br>'),
+        })
+
+    return JsonResponse({ "messages": messages_payload })
