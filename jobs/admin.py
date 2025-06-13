@@ -1851,8 +1851,8 @@ class QuotationFixedPriceDeliverableAdmin(admin.ModelAdmin):
 # ADMIN SITE CONFIGURATION
 # ═════════════════════════════════════════════════════════════════════════════
 
-admin.site.site_header = "C4 Defence Administration - Complete Costing Management"
-admin.site.site_title = "C4D Complete Admin"
-admin.site.index_title = "C4D Administration Portal - Applications, Advanced Costing & Risk Assessment"
+admin.site.site_header = "C4 Defence Administration"
+admin.site.site_title = "C4D Admin"
+admin.site.index_title = "C4D Administration Portal - Applications, Costing & Risk Assessment"
 
 admin.site.enable_nav_sidebar = True
